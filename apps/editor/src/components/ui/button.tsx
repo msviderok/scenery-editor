@@ -1,7 +1,19 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
+import { mergeProps, splitProps, type JSX } from "solid-js";
 
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
+
+function callEventHandler<T, E extends Event>(
+  handler: JSX.EventHandlerUnion<T, E> | undefined,
+  event: E & { currentTarget: T; target: Element }
+) {
+  if (!handler) return;
+  if (typeof handler === "function") {
+    handler(event);
+  } else {
+    handler[0](handler[1], event);
+  }
+}
 
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-xs/relaxed font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -38,17 +50,99 @@ const buttonVariants = cva(
   }
 );
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+type ButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    focusableWhenDisabled?: boolean | undefined;
+    nativeButton?: boolean | undefined;
+  };
+
+function Button(props: ButtonProps) {
+  const mergedProps = mergeProps(
+    {
+      variant: "default" as const,
+      size: "default" as const,
+      focusableWhenDisabled: false,
+      nativeButton: true,
+      type: "button" as const,
+    },
+    props
+  );
+
+  const [local, rest] = splitProps(mergedProps, [
+    "class",
+    "variant",
+    "size",
+    "disabled",
+    "focusableWhenDisabled",
+    "nativeButton",
+    "type",
+    "tabIndex",
+    "onClick",
+    "onMouseDown",
+    "onPointerDown",
+    "onKeyDown",
+    "onKeyUp",
+  ]);
+
+  const isDisabled = () => Boolean(local.disabled);
+  const isFocusableWhenDisabled = () => isDisabled() && Boolean(local.focusableWhenDisabled);
+
+  const handleClick: JSX.EventHandler<HTMLButtonElement, MouseEvent> = (event) => {
+    if (isDisabled()) {
+      event.preventDefault();
+      return;
+    }
+    callEventHandler(local.onClick, event);
+  };
+
+  const handleMouseDown: JSX.EventHandler<HTMLButtonElement, MouseEvent> = (event) => {
+    if (!isDisabled()) {
+      callEventHandler(local.onMouseDown, event);
+    }
+  };
+
+  const handlePointerDown: JSX.EventHandler<HTMLButtonElement, PointerEvent> = (event) => {
+    if (isDisabled()) {
+      event.preventDefault();
+      return;
+    }
+    callEventHandler(local.onPointerDown, event);
+  };
+
+  const handleKeyDown: JSX.EventHandler<HTMLButtonElement, KeyboardEvent> = (event) => {
+    if (isDisabled()) {
+      if (isFocusableWhenDisabled()) {
+        event.preventDefault();
+      }
+      return;
+    }
+    callEventHandler(local.onKeyDown, event);
+  };
+
+  const handleKeyUp: JSX.EventHandler<HTMLButtonElement, KeyboardEvent> = (event) => {
+    if (isDisabled()) {
+      if (isFocusableWhenDisabled()) {
+        event.preventDefault();
+      }
+      return;
+    }
+    callEventHandler(local.onKeyUp, event);
+  };
+
   return (
-    <ButtonPrimitive
+    <button
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      aria-disabled={isDisabled() || undefined}
+      class={cn(buttonVariants({ variant: local.variant, size: local.size }), local.class)}
+      disabled={isDisabled() && !isFocusableWhenDisabled()}
+      tabIndex={isFocusableWhenDisabled() ? local.tabIndex ?? 0 : local.tabIndex}
+      type={local.nativeButton ? local.type : undefined}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
+      {...rest}
     />
   );
 }

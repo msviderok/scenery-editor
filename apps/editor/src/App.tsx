@@ -1,3 +1,20 @@
+import {
+  ArrowDownToLine,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ArrowUpToLine,
+  ChevronDown,
+  ArrowDown as IconArrowDown,
+  ArrowUp as IconArrowUp,
+  Plus as IconPlus,
+  RefreshCw as IconRefresh,
+  Lock,
+  LockOpen,
+  RotateCw,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-solid";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createStore, produce, unwrap } from "solid-js/store";
 import {
@@ -12,31 +29,10 @@ import {
   type SpriteAsset,
   type SpriteNode,
 } from "../../../shared/ast";
-import { PopoverContent, PopoverRoot, PopoverSection, PopoverTrigger } from "./popover";
-import {
-  Lock,
-  LockOpen,
-  Trash2,
-  RotateCw,
-  ChevronDown,
-  ArrowUp as IconArrowUp,
-  ArrowDown as IconArrowDown,
-  Plus as IconPlus,
-  RefreshCw as IconRefresh,
-  ZoomIn,
-  ZoomOut,
-  Power,
-  ArrowUpToLine,
-  ArrowRightToLine,
-  ArrowDownToLine,
-  ArrowLeftToLine,
-} from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./components/ui/collapsible";
 import { Button } from "./components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./components/ui/collapsible";
+import { PopoverContent, PopoverRoot, PopoverSection, PopoverTrigger } from "./popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 
 const WORKSPACE_PADDING = 240;
 const MIN_NODE_SIZE = 24;
@@ -136,6 +132,28 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function CollisionIcon(props: { class?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      class={props.class}
+      aria-hidden="true"
+    >
+      <rect x="2.25" y="5.25" width="3.5" height="5.5" rx="1" />
+      <rect x="9" y="3" width="4.75" height="10" rx="1.5" />
+      <path d="M7.75 8h1.5" />
+      <path d="M8.5 7.25v1.5" />
+      <path d="M7.97 7.47l1.06 1.06" />
+      <path d="M9.03 7.47L7.97 8.53" />
+    </svg>
+  );
+}
+
 function snapToGrid(value: number, grid: number) {
   return Math.round(value / grid) * grid;
 }
@@ -227,7 +245,7 @@ function getNextPersistenceSlot() {
 
 function sanitizePersistedUiState(
   value: unknown,
-  project: ReturnType<typeof createEmptyProject>,
+  project: ReturnType<typeof createEmptyProject>
 ): PersistedEditorUiState {
   const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const sceneIds = new Set(project.scenes.map((scene) => scene.id));
@@ -235,13 +253,18 @@ function sanitizePersistedUiState(
     typeof record.selectedSceneId === "string" && sceneIds.has(record.selectedSceneId)
       ? record.selectedSceneId
       : project.scenes[0].id;
-  const selectedScene = project.scenes.find((scene) => scene.id === selectedSceneId) ?? project.scenes[0];
+  const selectedScene =
+    project.scenes.find((scene) => scene.id === selectedSceneId) ?? project.scenes[0];
   const nodeIds = new Set(selectedScene.nodes.map((node) => node.id));
   const selectedNodeIds = Array.isArray(record.selectedNodeIds)
-    ? record.selectedNodeIds.filter((entry): entry is string => typeof entry === "string" && nodeIds.has(entry))
+    ? record.selectedNodeIds.filter(
+        (entry): entry is string => typeof entry === "string" && nodeIds.has(entry)
+      )
     : [];
   const nodeStyleId =
-    typeof record.nodeStyleId === "string" && nodeIds.has(record.nodeStyleId) ? record.nodeStyleId : null;
+    typeof record.nodeStyleId === "string" && nodeIds.has(record.nodeStyleId)
+      ? record.nodeStyleId
+      : null;
   const collisionEditorId =
     typeof record.collisionEditorId === "string" && nodeIds.has(record.collisionEditorId)
       ? record.collisionEditorId
@@ -259,15 +282,17 @@ function sanitizePersistedUiState(
         ? record.viewportScale
         : 0.75,
       0.1,
-      4,
+      4
     ),
     nodeStyleId,
     collisionEditorId,
     gridVisible: typeof record.gridVisible === "boolean" ? record.gridVisible : true,
     gridSize: clamp(
-      typeof record.gridSize === "number" && Number.isFinite(record.gridSize) ? record.gridSize : 32,
+      typeof record.gridSize === "number" && Number.isFinite(record.gridSize)
+        ? record.gridSize
+        : 32,
       4,
-      128,
+      128
     ),
     workspaceScroll: {
       left:
@@ -335,12 +360,14 @@ export default function App() {
 
   const [project, setProject] = createStore(initialProject);
   const [selectedSceneId, setSelectedSceneId] = createSignal(initialUiState.selectedSceneId);
-  const [selectedNodeIds, setSelectedNodeIds] = createSignal<string[]>(initialUiState.selectedNodeIds);
+  const [selectedNodeIds, setSelectedNodeIds] = createSignal<string[]>(
+    initialUiState.selectedNodeIds
+  );
   const [interaction, setInteraction] = createSignal<Interaction | null>(null);
   const [workspaceRef, setWorkspaceRef] = createSignal<HTMLDivElement>();
   const [nodeStyleId, setNodeStyleId] = createSignal<string | null>(initialUiState.nodeStyleId);
   const [collisionEditorId, setCollisionEditorId] = createSignal<string | null>(
-    initialUiState.collisionEditorId,
+    initialUiState.collisionEditorId
   );
   const [folderSprites, setFolderSprites] = createSignal<FolderSpriteSource[]>([]);
   const [gridVisible, setGridVisible] = createSignal(initialUiState.gridVisible);
@@ -361,9 +388,10 @@ export default function App() {
   let pendingPersistencePayload: string | null = null;
   let nextPersistenceSlot = getNextPersistenceSlot();
   let restoredWorkspaceScroll = false;
+  let stylePopoverContentEl: HTMLDivElement | undefined;
 
   const selectedScene = createMemo(
-    () => project.scenes.find((scene) => scene.id === selectedSceneId()) ?? project.scenes[0],
+    () => project.scenes.find((scene) => scene.id === selectedSceneId()) ?? project.scenes[0]
   );
   const selectedNodeSet = createMemo(() => new Set(selectedNodeIds()));
   const marqueeRect = createMemo<MarqueeRect | null>(() => {
@@ -388,15 +416,16 @@ export default function App() {
   });
 
   const currentSceneIndex = createMemo(() =>
-    project.scenes.findIndex((scene) => scene.id === selectedScene().id),
+    project.scenes.findIndex((scene) => scene.id === selectedScene().id)
   );
 
   const toolbarPosition = createMemo(() => {
     const node = singleSelectedNode();
     if (!node) return null;
+    const scale = viewportScale();
     return {
-      left: WORKSPACE_PADDING + node.x + node.width / 2,
-      top: WORKSPACE_PADDING + node.y + 12,
+      left: (WORKSPACE_PADDING + node.x + node.width / 2) * scale,
+      top: (WORKSPACE_PADDING + node.y) * scale + 12,
     };
   });
 
@@ -409,7 +438,7 @@ export default function App() {
       setPersistenceError(null);
     } catch (error) {
       setPersistenceError(
-        "Autosave to localStorage failed. The current editor session may not survive a refresh until storage is freed.",
+        "Autosave to localStorage failed. The current editor session may not survive a refresh until storage is freed."
       );
       console.error("Failed to persist sprite editor state to localStorage.", error);
     }
@@ -448,9 +477,11 @@ export default function App() {
     // Preload dimensions for all folder sprites
     for (const sprite of sprites) {
       if (!folderSpriteSizeCache.has(sprite.url)) {
-        void readImageSize(sprite.url).then((size) => {
-          folderSpriteSizeCache.set(sprite.url, size);
-        }).catch(() => {});
+        void readImageSize(sprite.url)
+          .then((size) => {
+            folderSpriteSizeCache.set(sprite.url, size);
+          })
+          .catch(() => {});
       }
     }
   };
@@ -531,7 +562,7 @@ export default function App() {
   const beginPointerSession = (
     pointerId: number,
     move: (event: PointerEvent) => void,
-    end?: () => void,
+    end?: () => void
   ) => {
     const onMove = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
@@ -557,7 +588,7 @@ export default function App() {
         const scene = draft.scenes.find((entry) => entry.id === selectedScene().id);
         if (!scene) return;
         updater(scene);
-      }),
+      })
     );
   };
 
@@ -572,7 +603,9 @@ export default function App() {
   const handleSelectNode = (nodeId: string, metaKey: boolean) => {
     if (metaKey) {
       setSelectedNodeIds((current) =>
-        current.includes(nodeId) ? current.filter((entry) => entry !== nodeId) : [...current, nodeId],
+        current.includes(nodeId)
+          ? current.filter((entry) => entry !== nodeId)
+          : [...current, nodeId]
       );
       return;
     }
@@ -598,7 +631,7 @@ export default function App() {
     const origins = Object.fromEntries(
       selectedScene()
         .nodes.filter((entry) => activeIds.includes(entry.id))
-        .map((entry) => [entry.id, { x: entry.x, y: entry.y }]),
+        .map((entry) => [entry.id, { x: entry.x, y: entry.y }])
     );
 
     setInteraction({
@@ -614,7 +647,7 @@ export default function App() {
       const scale = viewportScale();
       const deltaX = (moveEvent.clientX - event.clientX) / scale;
       const deltaY = (moveEvent.clientY - event.clientY) / scale;
-      const gridSize = gridSize();
+      const gs = gridSize();
       setProject(
         produce((draft) => {
           const scene = draft.scenes.find((entry) => entry.id === selectedScene().id);
@@ -623,10 +656,10 @@ export default function App() {
             const target = scene.nodes.find((entry) => entry.id === targetId);
             const origin = origins[targetId];
             if (!target || !origin || target.locked) continue;
-            target.x = snapToGrid(origin.x + deltaX, gridSize);
-            target.y = snapToGrid(origin.y + deltaY, gridSize);
+            target.x = snapToGrid(origin.x + deltaX, gs);
+            target.y = snapToGrid(origin.y + deltaY, gs);
           }
-        }),
+        })
       );
     });
   };
@@ -641,10 +674,8 @@ export default function App() {
     const vScale = viewportScale();
     const centerSceneX = node.x + node.width / 2;
     const centerSceneY = node.y + node.height / 2;
-    const centerX =
-      rect.left + (WORKSPACE_PADDING + centerSceneX) * vScale - workspace.scrollLeft;
-    const centerY =
-      rect.top + (WORKSPACE_PADDING + centerSceneY) * vScale - workspace.scrollTop;
+    const centerX = rect.left + (WORKSPACE_PADDING + centerSceneX) * vScale - workspace.scrollLeft;
+    const centerY = rect.top + (WORKSPACE_PADDING + centerSceneY) * vScale - workspace.scrollTop;
     const startAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX);
     setInteraction({
       type: "rotate",
@@ -667,7 +698,11 @@ export default function App() {
     });
   };
 
-  const handleStartResize = (nodeId: string, handle: "nw" | "ne" | "sw" | "se", event: PointerEvent) => {
+  const handleStartResize = (
+    nodeId: string,
+    handle: "nw" | "ne" | "sw" | "se",
+    event: PointerEvent
+  ) => {
     event.stopPropagation();
     const node = selectedScene().nodes.find((entry) => entry.id === nodeId);
     if (!node || node.locked) return;
@@ -687,7 +722,7 @@ export default function App() {
       const scale = viewportScale();
       const deltaX = (moveEvent.clientX - event.clientX) / scale;
       const deltaY = (moveEvent.clientY - event.clientY) / scale;
-      const gridSize = gridSize();
+      const gs = gridSize();
       const keepAspect = !moveEvent.shiftKey;
       const aspectRatio = origin.width / origin.height;
 
@@ -707,7 +742,7 @@ export default function App() {
           const scaleFromH = rawH / origin.height;
           const scaleFactor =
             Math.abs(scaleFromW - 1) >= Math.abs(scaleFromH - 1) ? scaleFromW : scaleFromH;
-          let snappedW = Math.max(MIN_NODE_SIZE, snapToGrid(origin.width * scaleFactor, gridSize));
+          let snappedW = Math.max(MIN_NODE_SIZE, snapToGrid(origin.width * scaleFactor, gs));
           const snapScale = snappedW / origin.width;
           let snappedH = Math.max(MIN_NODE_SIZE, Math.round(origin.height * snapScale));
           // if minimum clamp kicked in, re-derive the other dim from aspect
@@ -744,19 +779,21 @@ export default function App() {
 
     const placeAssetNode = (asset: SpriteAsset) => {
       const rect = workspace.getBoundingClientRect();
-      const gridSize = gridSize();
+      const gs = gridSize();
       const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
       const scale = Math.min(1, capHeight / asset.height);
       const width = Math.round(asset.width * scale);
       const height = Math.round(asset.height * scale);
       const vScale = viewportScale();
-      const pointerSceneX = (event.clientX - rect.left + workspace.scrollLeft) / vScale - WORKSPACE_PADDING;
-      const pointerSceneY = (event.clientY - rect.top + workspace.scrollTop) / vScale - WORKSPACE_PADDING;
-      const x = snapToGrid(pointerSceneX - width / 2, gridSize);
-      const y = snapToGrid(pointerSceneY - height / 2, gridSize);
+      const pointerSceneX =
+        (event.clientX - rect.left + workspace.scrollLeft) / vScale - WORKSPACE_PADDING;
+      const pointerSceneY =
+        (event.clientY - rect.top + workspace.scrollTop) / vScale - WORKSPACE_PADDING;
+      const x = snapToGrid(pointerSceneX - width / 2, gs);
+      const y = snapToGrid(pointerSceneY - height / 2, gs);
       const nodeId = nextId(
         "node",
-        selectedScene().nodes.map((node) => node.id),
+        selectedScene().nodes.map((node) => node.id)
       );
 
       updateScene((draft) => {
@@ -792,7 +829,7 @@ export default function App() {
     void (async () => {
       const source = JSON.parse(folderAssetPayload) as FolderSpriteSource;
       const existing = Object.values(project.assets).find(
-        (asset) => asset.sourcePath && asset.sourcePath === source.sourcePath,
+        (asset) => asset.sourcePath && asset.sourcePath === source.sourcePath
       );
       if (existing) {
         placeAssetNode(existing);
@@ -822,19 +859,15 @@ export default function App() {
       const dataUrl = await readFileAsDataUrl(file);
       const size = await readImageSize(dataUrl);
       const assetId = nextId("asset", Object.keys(project.assets));
-      setProject(
-        "assets",
-        assetId,
-        {
-          id: assetId,
-          kind: "image",
-          fileName: file.name,
-          width: size.width,
-          height: size.height,
-          mimeType: file.type,
-          dataUrl,
-        },
-      );
+      setProject("assets", assetId, {
+        id: assetId,
+        kind: "image",
+        fileName: file.name,
+        width: size.width,
+        height: size.height,
+        mimeType: file.type,
+        dataUrl,
+      });
     }
   };
 
@@ -894,7 +927,7 @@ export default function App() {
     const lockedIds = new Set(
       selectedScene()
         .nodes.filter((node) => selectedNodeSet().has(node.id) && node.locked)
-        .map((node) => node.id),
+        .map((node) => node.id)
     );
     if (!deletableIds.size) return;
     updateScene((scene) => {
@@ -908,7 +941,7 @@ export default function App() {
   const sceneStyleInput = (
     key: keyof BackgroundStyle,
     label: string,
-    type: "text" | "color" = "text",
+    type: "text" | "color" = "text"
   ) => (
     <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
       <span>{label}</span>
@@ -938,7 +971,7 @@ export default function App() {
     nodeId: string,
     key: keyof BackgroundStyle,
     label: string,
-    type: "text" | "color" = "text",
+    type: "text" | "color" = "text"
   ) => {
     const node = () => selectedScene().nodes.find((entry) => entry.id === nodeId);
     return (
@@ -1001,7 +1034,10 @@ export default function App() {
           </div>
         </div>
 
-        <Collapsible defaultOpen class="rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 shrink-0 group">
+        <Collapsible
+          defaultOpen
+          class="rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 shrink-0 group"
+        >
           <div class="mb-2.5 flex items-center justify-between gap-2">
             <CollapsibleTrigger class="flex min-w-0 flex-1 items-center gap-2 text-left">
               <ChevronDown class="h-3.5 w-3.5 text-white/40 transition-transform duration-200 group-data-[state=closed]:-rotate-90" />
@@ -1017,12 +1053,12 @@ export default function App() {
               onClick={() => {
                 const id = nextId(
                   "scene",
-                  project.scenes.map((scene) => scene.id),
+                  project.scenes.map((scene) => scene.id)
                 );
                 setProject(
                   "scenes",
                   project.scenes.length,
-                  createDefaultScene(id, `Scene ${project.scenes.length + 1}`),
+                  createDefaultScene(id, `Scene ${project.scenes.length + 1}`)
                 );
                 setSelectedSceneId(id);
                 setSelectedNodeIds([]);
@@ -1033,144 +1069,160 @@ export default function App() {
           </div>
 
           <CollapsibleContent class="flex flex-col gap-1">
-          <div class="flex flex-col gap-1">
-            <For each={project.scenes}>
-              {(scene, index) => (
-                <div
-                  class="flex items-center justify-between gap-2 rounded-lg border border-white/6 bg-transparent px-2.5 py-2 transition hover:bg-white/4"
-                  classList={{
-                    "border-blue-400/35 bg-blue-400/8": scene.id === selectedSceneId(),
-                  }}
-                >
-                  <button
-                    class="min-w-0 flex-1 border-0 bg-transparent p-0 text-left text-[13px] text-white"
-                    onClick={() => {
-                      setSelectedSceneId(scene.id);
-                      setSelectedNodeIds([]);
+            <div class="flex flex-col gap-1">
+              <For each={project.scenes}>
+                {(scene, index) => (
+                  <div
+                    class="flex items-center justify-between gap-2 rounded-lg border border-white/6 bg-transparent px-2.5 py-2 transition hover:bg-white/4"
+                    classList={{
+                      "border-blue-400/35 bg-blue-400/8": scene.id === selectedSceneId(),
                     }}
                   >
-                    <span class="block truncate">{scene.name}</span>
-                  </button>
-                  <span class="inline-flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon-xs"
-                      title="Move up"
-                      disabled={index() === 0}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setProject("scenes", swapAtIndex(project.scenes, index(), index() - 1));
+                    <button
+                      class="min-w-0 flex-1 border-0 bg-transparent p-0 text-left text-[13px] text-white"
+                      onClick={() => {
+                        setSelectedSceneId(scene.id);
+                        setSelectedNodeIds([]);
                       }}
                     >
-                      <IconArrowUp />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon-xs"
-                      title="Move down"
-                      disabled={index() === project.scenes.length - 1}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setProject("scenes", swapAtIndex(project.scenes, index(), index() + 1));
-                      }}
-                    >
-                      <IconArrowDown />
-                    </Button>
-                  </span>
-                </div>
-              )}
-            </For>
-          </div>
+                      <span class="block truncate">{scene.name}</span>
+                    </button>
+                    <span class="inline-flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon-xs"
+                        title="Move up"
+                        disabled={index() === 0}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setProject("scenes", swapAtIndex(project.scenes, index(), index() - 1));
+                        }}
+                      >
+                        <IconArrowUp />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon-xs"
+                        title="Move down"
+                        disabled={index() === project.scenes.length - 1}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setProject("scenes", swapAtIndex(project.scenes, index(), index() + 1));
+                        }}
+                      >
+                        <IconArrowDown />
+                      </Button>
+                    </span>
+                  </div>
+                )}
+              </For>
+            </div>
 
-          <div class="grid grid-cols-2 gap-1.5">
-            <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-              <span>Name</span>
-              <input
-                class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-                value={selectedScene().name}
-                onInput={(event) => updateScene((scene) => (scene.name = event.currentTarget.value))}
-              />
-            </label>
-            <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-              <span>Width</span>
-              <input
-                class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-                type="number"
-                min="64"
-                value={selectedScene().size.width}
-                onInput={(event) =>
-                  updateScene((scene) => (scene.size.width = Math.max(64, Number(event.currentTarget.value) || 1920)))
-                }
-              />
-            </label>
-            <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-              <span>Height</span>
-              <input
-                class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-                type="number"
-                min="64"
-                value={selectedScene().size.height}
-                onInput={(event) =>
-                  updateScene((scene) =>
-                    (scene.size.height = Math.max(64, Number(event.currentTarget.value) || 1080)),
-                  )
-                }
-              />
-            </label>
-            <label class="flex items-center justify-between gap-3 rounded-lg border border-white/8 bg-white/[0.03] px-2 py-[7px] text-[10px] uppercase tracking-[0.12em] text-white/40">
-              <span>Show grid</span>
-              <input
-                class="m-0 accent-[#5f98ff]"
-                type="checkbox"
-                checked={gridVisible()}
-                onChange={(event) => setGridVisible(event.currentTarget.checked)}
-              />
-            </label>
-            <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-              <span>Grid size</span>
-              <input
-                class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-                type="number"
-                min="4"
-                max="128"
-                value={gridSize()}
-                onInput={(event) => setGridSize(clamp(Number(event.currentTarget.value) || 32, 4, 128))}
-              />
-            </label>
-          </div>
+            <div class="grid grid-cols-2 gap-1.5">
+              <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
+                <span>Name</span>
+                <input
+                  class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
+                  value={selectedScene().name}
+                  onInput={(event) =>
+                    updateScene((scene) => (scene.name = event.currentTarget.value))
+                  }
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
+                <span>Width</span>
+                <input
+                  class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
+                  type="number"
+                  min="64"
+                  value={selectedScene().size.width}
+                  onInput={(event) =>
+                    updateScene(
+                      (scene) =>
+                        (scene.size.width = Math.max(64, Number(event.currentTarget.value) || 1920))
+                    )
+                  }
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
+                <span>Height</span>
+                <input
+                  class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
+                  type="number"
+                  min="64"
+                  value={selectedScene().size.height}
+                  onInput={(event) =>
+                    updateScene(
+                      (scene) =>
+                        (scene.size.height = Math.max(
+                          64,
+                          Number(event.currentTarget.value) || 1080
+                        ))
+                    )
+                  }
+                />
+              </label>
+              <label class="flex items-center justify-between gap-3 rounded-lg border border-white/8 bg-white/[0.03] px-2 py-[7px] text-[10px] uppercase tracking-[0.12em] text-white/40">
+                <span>Show grid</span>
+                <input
+                  class="m-0 accent-[#5f98ff]"
+                  type="checkbox"
+                  checked={gridVisible()}
+                  onChange={(event) => setGridVisible(event.currentTarget.checked)}
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
+                <span>Grid size</span>
+                <input
+                  class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
+                  type="number"
+                  min="4"
+                  max="128"
+                  value={gridSize()}
+                  onInput={(event) =>
+                    setGridSize(clamp(Number(event.currentTarget.value) || 32, 4, 128))
+                  }
+                />
+              </label>
+            </div>
 
-          <div class="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">Scene background</div>
-          <div class="grid grid-cols-2 gap-1.5">
-            {sceneStyleInput("backgroundColor", "Color", "color")}
-            {sceneStyleInput("backgroundImage", "Image")}
-            {sceneStyleInput("backgroundSize", "Size")}
-            {sceneStyleInput("backgroundRepeat", "Repeat")}
-            {sceneStyleInput("backgroundPosition", "Position")}
-          </div>
+            <div class="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">
+              Scene background
+            </div>
+            <div class="grid grid-cols-2 gap-1.5">
+              {sceneStyleInput("backgroundColor", "Color", "color")}
+              {sceneStyleInput("backgroundImage", "Image")}
+              {sceneStyleInput("backgroundSize", "Size")}
+              {sceneStyleInput("backgroundRepeat", "Repeat")}
+              {sceneStyleInput("backgroundPosition", "Position")}
+            </div>
 
-          <Show when={project.scenes.length > 1}>
-            <Button
-              variant="destructive"
-              size="sm"
-              title="Delete scene"
-              onClick={() => {
-                const current = selectedScene();
-                setProject(
-                  "scenes",
-                  project.scenes.filter((scene) => scene.id !== current.id),
-                );
-                const nextScene = project.scenes.find((scene) => scene.id !== current.id);
-                if (nextScene) setSelectedSceneId(nextScene.id);
-                setSelectedNodeIds([]);
-              }}
-            >
-              <Trash2 />
-            </Button>
-          </Show>
+            <Show when={project.scenes.length > 1}>
+              <Button
+                variant="destructive"
+                size="sm"
+                title="Delete scene"
+                onClick={() => {
+                  const current = selectedScene();
+                  setProject(
+                    "scenes",
+                    project.scenes.filter((scene) => scene.id !== current.id)
+                  );
+                  const nextScene = project.scenes.find((scene) => scene.id !== current.id);
+                  if (nextScene) setSelectedSceneId(nextScene.id);
+                  setSelectedNodeIds([]);
+                }}
+              >
+                <Trash2 />
+              </Button>
+            </Show>
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible defaultOpen class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 group">
+        <Collapsible
+          defaultOpen
+          class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 group"
+        >
           <div class="mb-2.5 flex items-center justify-between gap-2 shrink-0">
             <CollapsibleTrigger class="flex min-w-0 flex-1 items-center gap-2 text-left">
               <ChevronDown class="h-3.5 w-3.5 text-white/40 transition-transform duration-200 group-data-[state=closed]:-rotate-90" />
@@ -1189,134 +1241,153 @@ export default function App() {
             </Button>
           </div>
           <CollapsibleContent class="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div class="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">Folder sprites</div>
-          <div class="flex flex-col gap-1">
-            <For each={folderSprites()}>
-              {(asset) => (
-                <div
-                  class="flex w-full cursor-grab items-center gap-2.5 rounded-lg border border-white/6 bg-transparent px-2 py-2 text-left transition hover:border-white/10 hover:bg-white/4 select-none"
-                  draggable={true}
-                  onDragStart={(event) => {
-                    event.dataTransfer?.setData("application/x-sprite-folder-asset", JSON.stringify(asset));
-                    event.dataTransfer!.effectAllowed = "copy";
-                    // Lookup existing asset or cached dimensions
-                    const existing = Object.values(project.assets).find(
-                      (a) => a.sourcePath && a.sourcePath === asset.sourcePath,
-                    );
-                    const cached = folderSpriteSizeCache.get(asset.url);
-                    const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
-                    if (existing) {
-                      const scale = Math.min(1, capHeight / existing.height);
-                      setDragGhost({
-                        x: 0, y: 0,
-                        width: Math.round(existing.width * scale),
-                        height: Math.round(existing.height * scale),
-                        imageUrl: asset.url,
-                      });
-                    } else if (cached) {
-                      const scale = Math.min(1, capHeight / cached.height);
-                      setDragGhost({
-                        x: 0, y: 0,
-                        width: Math.round(cached.width * scale),
-                        height: Math.round(cached.height * scale),
-                        imageUrl: asset.url,
-                      });
-                    } else {
-                      // Start with no ghost, load dimensions async and update
-                      setDragGhost(null);
-                      void readImageSize(asset.url).then((size) => {
-                        folderSpriteSizeCache.set(asset.url, size);
-                        const scale = Math.min(1, capHeight / size.height);
-                        setDragGhost((prev) => prev === null ? null : {
-                          ...prev,
-                          width: Math.round(size.width * scale),
-                          height: Math.round(size.height * scale),
+            <div class="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">
+              Folder sprites
+            </div>
+            <div class="flex flex-col gap-1">
+              <For each={folderSprites()}>
+                {(asset) => (
+                  <div
+                    class="flex w-full cursor-grab items-center gap-2.5 rounded-lg border border-white/6 bg-transparent px-2 py-2 text-left transition hover:border-white/10 hover:bg-white/4 select-none"
+                    draggable={true}
+                    onDragStart={(event) => {
+                      event.dataTransfer?.setData(
+                        "application/x-sprite-folder-asset",
+                        JSON.stringify(asset)
+                      );
+                      event.dataTransfer!.effectAllowed = "copy";
+                      // Lookup existing asset or cached dimensions
+                      const existing = Object.values(project.assets).find(
+                        (a) => a.sourcePath && a.sourcePath === asset.sourcePath
+                      );
+                      const cached = folderSpriteSizeCache.get(asset.url);
+                      const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
+                      if (existing) {
+                        const scale = Math.min(1, capHeight / existing.height);
+                        setDragGhost({
+                          x: 0,
+                          y: 0,
+                          width: Math.round(existing.width * scale),
+                          height: Math.round(existing.height * scale),
+                          imageUrl: asset.url,
                         });
-                      });
-                      // Set a temporary ghost so position tracking works
-                      setDragGhost({
-                        x: 0, y: 0,
-                        width: 64, height: 64,
-                        imageUrl: asset.url,
-                      });
-                    }
-                  }}
-                  onDragEnd={() => setDragGhost(null)}
-                >
-                  <div class="pointer-events-none grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md border border-white/6 bg-white/4">
-                    <img
-                      alt={asset.fileName}
-                      class="max-h-full max-w-full object-contain [image-rendering:pixelated]"
-                      draggable={false}
-                      src={asset.url}
-                    />
-                  </div>
-                  <div class="pointer-events-none flex min-w-0 flex-col gap-0.5">
-                    <strong class="truncate text-xs font-medium">{asset.fileName}</strong>
-                    <span class="truncate text-[10px] text-white/35 [font-variant-numeric:tabular-nums]">
-                      {asset.relativePath}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </For>
-            <Show when={!folderSprites().length}>
-              <div class="rounded-lg border border-dashed border-white/10 p-3 text-xs text-white/35">
-                Put image files into <code>sprites/</code> at the repo root.
-              </div>
-            </Show>
-          </div>
-
-          <div class="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">Imported into project</div>
-          <div class="flex flex-col gap-1">
-            <For each={Object.values(project.assets)}>
-              {(asset) => (
-                <div
-                  class="flex w-full cursor-grab items-center gap-2.5 rounded-lg border border-white/6 bg-transparent px-2 py-2 text-left transition hover:border-white/10 hover:bg-white/4 select-none"
-                  draggable={true}
-                  onDragStart={(event) => {
-                    event.dataTransfer?.setData("application/x-sprite-asset", asset.id);
-                    event.dataTransfer!.effectAllowed = "copy";
-                    const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
-                    const scale = Math.min(1, capHeight / asset.height);
-                    setDragGhost({
-                      x: 0,
-                      y: 0,
-                      width: Math.round(asset.width * scale),
-                      height: Math.round(asset.height * scale),
-                      imageUrl: getAssetUrl(asset),
-                    });
-                  }}
-                  onDragEnd={() => setDragGhost(null)}
-                >
-                  <div class="pointer-events-none grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md border border-white/6 bg-white/4">
-                    <Show
-                      when={getAssetUrl(asset)}
-                      fallback={<div class="p-1.5 text-center text-[10px] text-white/40">{asset.fileName}</div>}
-                    >
+                      } else if (cached) {
+                        const scale = Math.min(1, capHeight / cached.height);
+                        setDragGhost({
+                          x: 0,
+                          y: 0,
+                          width: Math.round(cached.width * scale),
+                          height: Math.round(cached.height * scale),
+                          imageUrl: asset.url,
+                        });
+                      } else {
+                        // Start with no ghost, load dimensions async and update
+                        setDragGhost(null);
+                        void readImageSize(asset.url).then((size) => {
+                          folderSpriteSizeCache.set(asset.url, size);
+                          const scale = Math.min(1, capHeight / size.height);
+                          setDragGhost((prev) =>
+                            prev === null
+                              ? null
+                              : {
+                                  ...prev,
+                                  width: Math.round(size.width * scale),
+                                  height: Math.round(size.height * scale),
+                                }
+                          );
+                        });
+                        // Set a temporary ghost so position tracking works
+                        setDragGhost({
+                          x: 0,
+                          y: 0,
+                          width: 64,
+                          height: 64,
+                          imageUrl: asset.url,
+                        });
+                      }
+                    }}
+                    onDragEnd={() => setDragGhost(null)}
+                  >
+                    <div class="pointer-events-none grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md border border-white/6 bg-white/4">
                       <img
                         alt={asset.fileName}
                         class="max-h-full max-w-full object-contain [image-rendering:pixelated]"
                         draggable={false}
-                        src={getAssetUrl(asset)}
+                        src={asset.url}
                       />
-                    </Show>
+                    </div>
+                    <div class="pointer-events-none flex min-w-0 flex-col gap-0.5">
+                      <strong class="truncate text-xs font-medium">{asset.fileName}</strong>
+                      <span class="truncate text-[10px] text-white/35 [font-variant-numeric:tabular-nums]">
+                        {asset.relativePath}
+                      </span>
+                    </div>
                   </div>
-                  <div class="pointer-events-none flex min-w-0 flex-col gap-0.5">
-                    <strong class="truncate text-xs font-medium">{asset.fileName}</strong>
-                    <span class="text-[10px] text-white/35 [font-variant-numeric:tabular-nums]">
-                      {asset.width} × {asset.height}
-                    </span>
-                  </div>
+                )}
+              </For>
+              <Show when={!folderSprites().length}>
+                <div class="rounded-lg border border-dashed border-white/10 p-3 text-xs text-white/35">
+                  Put image files into <code>sprites/</code> at the repo root.
                 </div>
-              )}
-            </For>
-            <Show when={!Object.keys(project.assets).length}>
-              <div class="rounded-lg border border-dashed border-white/10 p-3 text-xs text-white/35">
-                Dropped folder sprites show up here.
-              </div>
-            </Show>
-          </div>
+              </Show>
+            </div>
+
+            <div class="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">
+              Imported into project
+            </div>
+            <div class="flex flex-col gap-1">
+              <For each={Object.values(project.assets)}>
+                {(asset) => (
+                  <div
+                    class="flex w-full cursor-grab items-center gap-2.5 rounded-lg border border-white/6 bg-transparent px-2 py-2 text-left transition hover:border-white/10 hover:bg-white/4 select-none"
+                    draggable={true}
+                    onDragStart={(event) => {
+                      event.dataTransfer?.setData("application/x-sprite-asset", asset.id);
+                      event.dataTransfer!.effectAllowed = "copy";
+                      const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
+                      const scale = Math.min(1, capHeight / asset.height);
+                      setDragGhost({
+                        x: 0,
+                        y: 0,
+                        width: Math.round(asset.width * scale),
+                        height: Math.round(asset.height * scale),
+                        imageUrl: getAssetUrl(asset),
+                      });
+                    }}
+                    onDragEnd={() => setDragGhost(null)}
+                  >
+                    <div class="pointer-events-none grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md border border-white/6 bg-white/4">
+                      <Show
+                        when={getAssetUrl(asset)}
+                        fallback={
+                          <div class="p-1.5 text-center text-[10px] text-white/40">
+                            {asset.fileName}
+                          </div>
+                        }
+                      >
+                        <img
+                          alt={asset.fileName}
+                          class="max-h-full max-w-full object-contain [image-rendering:pixelated]"
+                          draggable={false}
+                          src={getAssetUrl(asset)}
+                        />
+                      </Show>
+                    </div>
+                    <div class="pointer-events-none flex min-w-0 flex-col gap-0.5">
+                      <strong class="truncate text-xs font-medium">{asset.fileName}</strong>
+                      <span class="text-[10px] text-white/35 [font-variant-numeric:tabular-nums]">
+                        {asset.width} × {asset.height}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </For>
+              <Show when={!Object.keys(project.assets).length}>
+                <div class="rounded-lg border border-dashed border-white/10 p-3 text-xs text-white/35">
+                  Dropped folder sprites show up here.
+                </div>
+              </Show>
+            </div>
           </CollapsibleContent>
         </Collapsible>
       </aside>
@@ -1332,7 +1403,12 @@ export default function App() {
           </div>
           <div class="flex flex-wrap items-center gap-1.5">
             <div class="flex items-center gap-0.5 rounded-md border border-white/8 bg-white/6 p-0.5 text-[11px] text-white/70">
-              <Button variant="ghost" size="icon-sm" title="Zoom out" onClick={() => adjustViewportScale(-0.1)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Zoom out"
+                onClick={() => adjustViewportScale(-0.1)}
+              >
                 <ZoomOut />
               </Button>
               <button
@@ -1342,7 +1418,12 @@ export default function App() {
               >
                 {Math.round(viewportScale() * 100)}%
               </button>
-              <Button variant="ghost" size="icon-sm" title="Zoom in" onClick={() => adjustViewportScale(0.1)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Zoom in"
+                onClick={() => adjustViewportScale(0.1)}
+              >
                 <ZoomIn />
               </Button>
             </div>
@@ -1359,428 +1440,523 @@ export default function App() {
         </div>
 
         <div class="relative flex min-h-0 flex-1">
-        <div
-          ref={setWorkspaceRef}
-          class="min-h-0 flex-1 overflow-auto"
-          onScroll={(event) => {
-            setWorkspaceScroll({
-              left: event.currentTarget.scrollLeft,
-              top: event.currentTarget.scrollTop,
-            });
-          }}
-          onDragOver={(event) => {
-            event.preventDefault();
-            const workspace = workspaceRef();
-            if (!workspace) return;
-
-            const folderPayload = event.dataTransfer?.types.includes("application/x-sprite-folder-asset");
-            const assetPayload = event.dataTransfer?.types.includes("application/x-sprite-asset");
-            if (!folderPayload && !assetPayload) return;
-
-            const rect = workspace.getBoundingClientRect();
-            const gridSize = gridSize();
-            const vScale = viewportScale();
-            const rawX = (event.clientX - rect.left + workspace.scrollLeft) / vScale - WORKSPACE_PADDING;
-            const rawY = (event.clientY - rect.top + workspace.scrollTop) / vScale - WORKSPACE_PADDING;
-
-            const ghost = dragGhost();
-            if (ghost) {
-              setDragGhost({
-                ...ghost,
-                x: snapToGrid(rawX - ghost.width / 2, gridSize),
-                y: snapToGrid(rawY - ghost.height / 2, gridSize),
-              });
-            }
-          }}
-          onDragLeave={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-              setDragGhost(null);
-            }
-          }}
-          onDrop={(event) => {
-            handleDropAsset(event);
-            setDragGhost(null);
-          }}
-          onPointerDown={(event) => {
-            if (event.button !== 0) return;
-            const workspace = workspaceRef();
-            if (!workspace) return;
-            const rect = workspace.getBoundingClientRect();
-            const vScale = viewportScale();
-            const originX = (event.clientX - rect.left + workspace.scrollLeft) / vScale - WORKSPACE_PADDING;
-            const originY = (event.clientY - rect.top + workspace.scrollTop) / vScale - WORKSPACE_PADDING;
-            const additive = event.metaKey || event.ctrlKey || event.shiftKey;
-            const baseSelection = additive ? selectedNodeIds() : [];
-            if (!additive) setSelectedNodeIds([]);
-            setInteraction({
-              type: "marquee",
-              pointerId: event.pointerId,
-              originX,
-              originY,
-              currentX: originX,
-              currentY: originY,
-              additive,
-              baseSelection,
-            });
-            beginPointerSession(event.pointerId, (moveEvent) => {
-              const ws = workspaceRef();
-              if (!ws) return;
-              const wsRect = ws.getBoundingClientRect();
-              const vs = viewportScale();
-              const currentX = (moveEvent.clientX - wsRect.left + ws.scrollLeft) / vs - WORKSPACE_PADDING;
-              const currentY = (moveEvent.clientY - wsRect.top + ws.scrollTop) / vs - WORKSPACE_PADDING;
-              setInteraction((prev) => {
-                if (!prev || prev.type !== "marquee") return prev;
-                return { ...prev, currentX, currentY };
-              });
-              const minX = Math.min(originX, currentX);
-              const minY = Math.min(originY, currentY);
-              const maxX = Math.max(originX, currentX);
-              const maxY = Math.max(originY, currentY);
-              const hits = selectedScene()
-                .nodes.filter(
-                  (node) =>
-                    node.x < maxX &&
-                    node.x + node.width > minX &&
-                    node.y < maxY &&
-                    node.y + node.height > minY,
-                )
-                .map((node) => node.id);
-              if (additive) {
-                const merged = new Set(baseSelection);
-                for (const id of hits) merged.add(id);
-                setSelectedNodeIds([...merged]);
-              } else {
-                setSelectedNodeIds(hits);
-              }
-            });
-          }}
-        >
           <div
-            class="relative min-h-full min-w-full"
-            style={{
-              width: `${(selectedScene().size.width + WORKSPACE_PADDING * 2) * viewportScale()}px`,
-              height: `${(selectedScene().size.height + WORKSPACE_PADDING * 2) * viewportScale()}px`,
+            ref={setWorkspaceRef}
+            class="min-h-0 flex-1 overflow-auto"
+            onScroll={(event) => {
+              setWorkspaceScroll({
+                left: event.currentTarget.scrollLeft,
+                top: event.currentTarget.scrollTop,
+              });
             }}
-          >
-          <div
-            class="absolute top-0 left-0 origin-top-left"
-            style={{
-              width: `${selectedScene().size.width + WORKSPACE_PADDING * 2}px`,
-              height: `${selectedScene().size.height + WORKSPACE_PADDING * 2}px`,
-              transform: `scale(${viewportScale()})`,
+            onDragOver={(event) => {
+              event.preventDefault();
+              const workspace = workspaceRef();
+              if (!workspace) return;
+
+              const folderPayload = event.dataTransfer?.types.includes(
+                "application/x-sprite-folder-asset"
+              );
+              const assetPayload = event.dataTransfer?.types.includes("application/x-sprite-asset");
+              if (!folderPayload && !assetPayload) return;
+
+              const rect = workspace.getBoundingClientRect();
+              const currentGridSize = gridSize();
+              const vScale = viewportScale();
+              const rawX =
+                (event.clientX - rect.left + workspace.scrollLeft) / vScale - WORKSPACE_PADDING;
+              const rawY =
+                (event.clientY - rect.top + workspace.scrollTop) / vScale - WORKSPACE_PADDING;
+
+              const ghost = dragGhost();
+              if (ghost) {
+                setDragGhost({
+                  ...ghost,
+                  x: snapToGrid(rawX - ghost.width / 2, currentGridSize),
+                  y: snapToGrid(rawY - ghost.height / 2, currentGridSize),
+                });
+              }
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                setDragGhost(null);
+              }
+            }}
+            onDrop={(event) => {
+              handleDropAsset(event);
+              setDragGhost(null);
+            }}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              const workspace = workspaceRef();
+              if (!workspace) return;
+              const rect = workspace.getBoundingClientRect();
+              const vScale = viewportScale();
+              const originX =
+                (event.clientX - rect.left + workspace.scrollLeft) / vScale - WORKSPACE_PADDING;
+              const originY =
+                (event.clientY - rect.top + workspace.scrollTop) / vScale - WORKSPACE_PADDING;
+              const additive = event.metaKey || event.ctrlKey || event.shiftKey;
+              const baseSelection = additive ? selectedNodeIds() : [];
+              if (!additive) setSelectedNodeIds([]);
+              setInteraction({
+                type: "marquee",
+                pointerId: event.pointerId,
+                originX,
+                originY,
+                currentX: originX,
+                currentY: originY,
+                additive,
+                baseSelection,
+              });
+              beginPointerSession(event.pointerId, (moveEvent) => {
+                const ws = workspaceRef();
+                if (!ws) return;
+                const wsRect = ws.getBoundingClientRect();
+                const vs = viewportScale();
+                const currentX =
+                  (moveEvent.clientX - wsRect.left + ws.scrollLeft) / vs - WORKSPACE_PADDING;
+                const currentY =
+                  (moveEvent.clientY - wsRect.top + ws.scrollTop) / vs - WORKSPACE_PADDING;
+                setInteraction((prev) => {
+                  if (!prev || prev.type !== "marquee") return prev;
+                  return { ...prev, currentX, currentY };
+                });
+                const minX = Math.min(originX, currentX);
+                const minY = Math.min(originY, currentY);
+                const maxX = Math.max(originX, currentX);
+                const maxY = Math.max(originY, currentY);
+                const hits = selectedScene()
+                  .nodes.filter(
+                    (node) =>
+                      node.x < maxX &&
+                      node.x + node.width > minX &&
+                      node.y < maxY &&
+                      node.y + node.height > minY
+                  )
+                  .map((node) => node.id);
+                if (additive) {
+                  const merged = new Set(baseSelection);
+                  for (const id of hits) merged.add(id);
+                  setSelectedNodeIds([...merged]);
+                } else {
+                  setSelectedNodeIds(hits);
+                }
+              });
             }}
           >
             <div
-              class="absolute overflow-hidden border border-white/8"
+              class="relative min-h-full min-w-full"
               style={{
-                left: `${WORKSPACE_PADDING}px`,
-                top: `${WORKSPACE_PADDING}px`,
-                width: `${selectedScene().size.width}px`,
-                height: `${selectedScene().size.height}px`,
-                ...createSceneBackground(selectedScene().backgroundStyle),
+                width: `${
+                  (selectedScene().size.width + WORKSPACE_PADDING * 2) * viewportScale()
+                }px`,
+                height: `${
+                  (selectedScene().size.height + WORKSPACE_PADDING * 2) * viewportScale()
+                }px`,
               }}
             >
-              <Show when={gridVisible()}>
+              {/* Scaled scenery layer: scene background, grid, asset images */}
+              <div
+                class="pointer-events-none absolute top-0 left-0 origin-top-left"
+                style={{
+                  width: `${selectedScene().size.width + WORKSPACE_PADDING * 2}px`,
+                  height: `${selectedScene().size.height + WORKSPACE_PADDING * 2}px`,
+                  transform: `scale(${viewportScale()})`,
+                }}
+              >
                 <div
-                  class="pointer-events-none absolute inset-0"
+                  class="absolute overflow-hidden border border-white/8"
                   style={{
-                    "background-image":
-                      "linear-gradient(to right, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px)",
-                    "background-size": `${gridSize()}px ${gridSize()}px`,
+                    left: `${WORKSPACE_PADDING}px`,
+                    top: `${WORKSPACE_PADDING}px`,
+                    width: `${selectedScene().size.width}px`,
+                    height: `${selectedScene().size.height}px`,
+                    ...createSceneBackground(selectedScene().backgroundStyle),
                   }}
-                />
-              </Show>
-            </div>
-
-            <Show when={dragGhost()}>
-              {(ghost) => (
-                <div
-                  class="pointer-events-none absolute z-30 border border-dashed border-blue-400/60 opacity-45 [image-rendering:pixelated]"
-                  style={{
-                    left: `${WORKSPACE_PADDING + ghost().x}px`,
-                    top: `${WORKSPACE_PADDING + ghost().y}px`,
-                    width: `${ghost().width}px`,
-                    height: `${ghost().height}px`,
-                    "background-image": `url("${ghost().imageUrl}")`,
-                    "background-size": "100% 100%",
-                    "background-repeat": "no-repeat",
-                    "background-position": "center",
-                  }}
-                />
-              )}
-            </Show>
-
-            <Show when={marqueeRect()}>
-              {(rect) => (
-                <div
-                  class="pointer-events-none absolute z-40 border-2 border-sky-300/90 bg-sky-400/15 shadow-[0_0_0_1px_rgba(125,211,252,0.35)]"
-                  style={{
-                    left: `${WORKSPACE_PADDING + rect().x}px`,
-                    top: `${WORKSPACE_PADDING + rect().y}px`,
-                    width: `${rect().width}px`,
-                    height: `${rect().height}px`,
-                  }}
-                />
-              )}
-            </Show>
-
-            <For each={selectedScene().nodes}>
-              {(node) => {
-                const asset = createMemo(() => project.assets[node.assetId]);
-                const isSelected = createMemo(() => selectedNodeSet().has(node.id));
-                return (
-                  <div
-                    class="absolute bg-transparent bg-center bg-no-repeat bg-[length:100%_100%] select-none touch-none [image-rendering:pixelated]"
-                    classList={{
-                      "outline outline-2 outline-offset-[2px] outline-amber-300 shadow-[0_0_0_6px_rgba(255,205,100,0.28),0_0_18px_4px_rgba(255,205,100,0.35)] z-20":
-                        isSelected(),
-                      "saturate-[0.9]": node.locked,
-                    }}
-                    style={{
-                      left: `${WORKSPACE_PADDING + node.x}px`,
-                      top: `${WORKSPACE_PADDING + node.y}px`,
-                      width: `${node.width}px`,
-                      height: `${node.height}px`,
-                      opacity: String(node.opacity),
-                      transform: `rotate(${node.rotation}deg)`,
-                      ...createNodeBackground(asset(), node.style),
-                    }}
-                    onPointerDown={(event) => {
-                      event.stopPropagation();
-                      handleStartDrag(node.id, event);
-                    }}
-                  >
-                    <Show when={!getAssetUrl(asset())}>
-                      <div class="absolute inset-0 grid place-items-center bg-black/40 p-2 text-center text-[10px] text-white/40">
-                        {asset()?.fileName ?? node.assetId}
-                      </div>
-                    </Show>
-
-                    <Show when={hasAnyCollision(node.collisions)}>
-                      <div
-                        class="absolute inset-x-0 top-0 h-[3px] bg-emerald-400/18 opacity-25"
-                        classList={{ "bg-emerald-400/92 opacity-100": node.collisions.top }}
-                      />
-                      <div
-                        class="absolute inset-y-0 right-0 w-[3px] bg-emerald-400/18 opacity-25"
-                        classList={{ "bg-emerald-400/92 opacity-100": node.collisions.right }}
-                      />
-                      <div
-                        class="absolute inset-x-0 bottom-0 h-[3px] bg-emerald-400/18 opacity-25"
-                        classList={{ "bg-emerald-400/92 opacity-100": node.collisions.bottom }}
-                      />
-                      <div
-                        class="absolute inset-y-0 left-0 w-[3px] bg-emerald-400/18 opacity-25"
-                        classList={{ "bg-emerald-400/92 opacity-100": node.collisions.left }}
-                      />
-                    </Show>
-
-                    <Show when={node.locked}>
-                      <div class="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded bg-amber-300/20 text-[#ffd991] ring-1 ring-amber-300/40">
-                        <Lock class="h-3 w-3" />
-                      </div>
-                    </Show>
-
-                    <Show when={isSelected() && selectedNodeIds().length === 1 && !node.locked}>
-                      <div
-                        class="absolute left-1/2 z-40 h-4 w-px -translate-x-1/2 bg-[#ffd58a]/70"
-                        style={{ top: "-22px" }}
-                      />
-                      <div
-                        class="absolute left-1/2 z-40 grid h-4 w-4 -translate-x-1/2 cursor-grab place-items-center rounded-full border border-[rgba(45,25,15,0.6)] bg-[#ffd58a] text-[#2d190f]"
-                        style={{ top: "-34px" }}
-                        title="Rotate"
-                        onPointerDown={(event) => handleStartRotate(node.id, event)}
-                      >
-                        <RotateCw class="h-2.5 w-2.5" />
-                      </div>
-                    </Show>
-
-                    <Show when={isSelected() && selectedNodeIds().length === 1 && !node.locked}>
-                      <div
-                        class="absolute -top-[5px] -left-[5px] z-40 h-2.5 w-2.5 cursor-nwse-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
-                        onPointerDown={(event) => handleStartResize(node.id, "nw", event)}
-                      />
-                      <div
-                        class="absolute -top-[5px] -right-[5px] z-40 h-2.5 w-2.5 cursor-nesw-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
-                        onPointerDown={(event) => handleStartResize(node.id, "ne", event)}
-                      />
-                      <div
-                        class="absolute -bottom-[5px] -left-[5px] z-40 h-2.5 w-2.5 cursor-nesw-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
-                        onPointerDown={(event) => handleStartResize(node.id, "sw", event)}
-                      />
-                      <div
-                        class="absolute -right-[5px] -bottom-[5px] z-40 h-2.5 w-2.5 cursor-nwse-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
-                        onPointerDown={(event) => handleStartResize(node.id, "se", event)}
-                      />
-                    </Show>
-                  </div>
-                );
-              }}
-            </For>
-
-            <Show when={singleSelectedNode()}>
-              {(node) => (
-                <div
-                  class="absolute z-50 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-full border border-white/10 bg-[rgba(18,15,13,0.78)] p-[3px] shadow-[0_14px_36px_rgba(0,0,0,0.38)] backdrop-blur-xl"
-                  style={{
-                    left: `${toolbarPosition()!.left}px`,
-                    top: `${toolbarPosition()!.top}px`,
-                  }}
-                  onPointerDown={(event) => event.stopPropagation()}
                 >
-                  <PopoverRoot
-                    open={nodeStyleId() === node().id}
-                    onOpenChange={(open) => setNodeStyleId(open ? node().id : null)}
-                  >
-                    <PopoverTrigger class="rounded-full border border-transparent bg-transparent px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/60 transition hover:border-white/10 hover:bg-white/8 hover:text-white/90">
-                      Style
-                    </PopoverTrigger>
-                    <PopoverContent side="top" collisionPadding={12} sticky>
-                      <PopoverSection>
-                        <strong class="text-xs font-semibold text-white/85">Node style</strong>
-                        {nodeStyleInput(node().id, "backgroundColor", "Color", "color")}
-                        {nodeStyleInput(node().id, "backgroundImage", "Image")}
-                        {nodeStyleInput(node().id, "backgroundSize", "Size")}
-                        {nodeStyleInput(node().id, "backgroundRepeat", "Repeat")}
-                        {nodeStyleInput(node().id, "backgroundPosition", "Position")}
-                        <label class="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-                          <span>Opacity</span>
-                          <input
-                            class="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={node().opacity}
-                            onInput={(event) =>
-                              updateNode(node().id, (draft) => {
-                                draft.opacity = clamp(Number(event.currentTarget.value) || 0, 0, 1);
-                              })
-                            }
-                          />
-                        </label>
-                      </PopoverSection>
-                    </PopoverContent>
-                  </PopoverRoot>
-
-                  <PopoverRoot
-                    open={collisionEditorId() === node().id}
-                    onOpenChange={(open) => setCollisionEditorId(open ? node().id : null)}
-                  >
-                    <PopoverTrigger
-                      class="grid h-7 w-7 place-items-center rounded-full border border-transparent bg-transparent text-white/60 transition hover:border-white/10 hover:bg-white/8 hover:text-white/90 aria-[pressed=true]:border-emerald-300/30 aria-[pressed=true]:bg-emerald-400/10 aria-[pressed=true]:text-emerald-200"
-                      aria-pressed={hasAnyCollision(node().collisions)}
-                      title="Collision sides"
-                    >
-                      <Power class="h-3.5 w-3.5" />
-                    </PopoverTrigger>
-                    <PopoverContent side="top" collisionPadding={12} sticky>
-                      <PopoverSection>
-                        <div class="flex items-center justify-between">
-                          <strong class="text-xs font-semibold text-white/85">Collision sides</strong>
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            title={hasAnyCollision(node().collisions) ? "Disable all" : "Enable all"}
-                            onClick={() =>
-                              updateNode(node().id, (draft) => {
-                                const next = !hasAnyCollision(draft.collisions);
-                                draft.collisions.top = next;
-                                draft.collisions.right = next;
-                                draft.collisions.bottom = next;
-                                draft.collisions.left = next;
-                              })
-                            }
-                          >
-                            <Power />
-                          </Button>
-                        </div>
-                        <div class="grid grid-cols-4 gap-1.5">
-                          <Button
-                            variant={node().collisions.top ? "default" : "outline"}
-                            size="icon"
-                            title="Top"
-                            onClick={() =>
-                              updateNode(node().id, (draft) => {
-                                draft.collisions.top = !draft.collisions.top;
-                              })
-                            }
-                          >
-                            <ArrowUpToLine />
-                          </Button>
-                          <Button
-                            variant={node().collisions.right ? "default" : "outline"}
-                            size="icon"
-                            title="Right"
-                            onClick={() =>
-                              updateNode(node().id, (draft) => {
-                                draft.collisions.right = !draft.collisions.right;
-                              })
-                            }
-                          >
-                            <ArrowRightToLine />
-                          </Button>
-                          <Button
-                            variant={node().collisions.bottom ? "default" : "outline"}
-                            size="icon"
-                            title="Bottom"
-                            onClick={() =>
-                              updateNode(node().id, (draft) => {
-                                draft.collisions.bottom = !draft.collisions.bottom;
-                              })
-                            }
-                          >
-                            <ArrowDownToLine />
-                          </Button>
-                          <Button
-                            variant={node().collisions.left ? "default" : "outline"}
-                            size="icon"
-                            title="Left"
-                            onClick={() =>
-                              updateNode(node().id, (draft) => {
-                                draft.collisions.left = !draft.collisions.left;
-                              })
-                            }
-                          >
-                            <ArrowLeftToLine />
-                          </Button>
-                        </div>
-                      </PopoverSection>
-                    </PopoverContent>
-                  </PopoverRoot>
-
-                  <Button
-                    variant={node().locked ? "default" : "ghost"}
-                    size="icon-sm"
-                    title={node().locked ? "Unlock" : "Lock"}
-                    onClick={() => updateNode(node().id, (draft) => (draft.locked = !draft.locked))}
-                  >
-                    {node().locked ? <Lock /> : <LockOpen />}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon-sm"
-                    title="Delete"
-                    disabled={!selectedUnlockedNodeIds().length}
-                    onClick={handleDeleteSelected}
-                  >
-                    <Trash2 />
-                  </Button>
+                  <Show when={gridVisible()}>
+                    <div
+                      class="pointer-events-none absolute inset-0"
+                      style={{
+                        "background-image":
+                          "linear-gradient(to right, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px)",
+                        "background-size": `${gridSize()}px ${gridSize()}px`,
+                      }}
+                    />
+                  </Show>
                 </div>
-              )}
-            </Show>
-          </div>
-          </div>
-        </div>
 
-        <Show when={interaction()?.type === "resize"}>
-          <div class="pointer-events-none absolute top-3 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-black/70 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-white/70 shadow-md backdrop-blur">
-            {shiftHeld() ? "Free-form resize" : "Hold Shift — free-form resize"}
-          </div>
-        </Show>
+                <Show when={dragGhost()}>
+                  {(ghost) => (
+                    <div
+                      class="pointer-events-none absolute z-30 border border-dashed border-blue-400/60 opacity-45 [image-rendering:pixelated]"
+                      style={{
+                        left: `${WORKSPACE_PADDING + ghost().x}px`,
+                        top: `${WORKSPACE_PADDING + ghost().y}px`,
+                        width: `${ghost().width}px`,
+                        height: `${ghost().height}px`,
+                        "background-image": `url("${ghost().imageUrl}")`,
+                        "background-size": "100% 100%",
+                        "background-repeat": "no-repeat",
+                        "background-position": "center",
+                      }}
+                    />
+                  )}
+                </Show>
 
+                <For each={selectedScene().nodes}>
+                  {(node) => {
+                    const asset = createMemo(() => project.assets[node.assetId]);
+                    const isSelected = createMemo(() => selectedNodeSet().has(node.id));
+                    return (
+                      <div
+                        class="absolute bg-transparent bg-center bg-no-repeat bg-[length:100%_100%] [image-rendering:pixelated]"
+                        classList={{
+                          "z-20": isSelected(),
+                          "saturate-[0.9]": node.locked,
+                        }}
+                        style={{
+                          left: `${WORKSPACE_PADDING + node.x}px`,
+                          top: `${WORKSPACE_PADDING + node.y}px`,
+                          width: `${node.width}px`,
+                          height: `${node.height}px`,
+                          opacity: String(node.opacity),
+                          transform: `rotate(${node.rotation}deg)`,
+                          ...createNodeBackground(asset(), node.style),
+                        }}
+                      >
+                        <Show when={!getAssetUrl(asset())}>
+                          <div class="absolute inset-0 grid place-items-center bg-black/40 p-2 text-center text-[10px] text-white/40">
+                            {asset()?.fileName ?? node.assetId}
+                          </div>
+                        </Show>
+                      </div>
+                    );
+                  }}
+                </For>
+              </div>
+
+              {/* Unscaled editing UI overlay: outlines, handles, marquee, toolbar */}
+              <div
+                class="absolute top-0 left-0"
+                style={{
+                  width: `${
+                    (selectedScene().size.width + WORKSPACE_PADDING * 2) * viewportScale()
+                  }px`,
+                  height: `${
+                    (selectedScene().size.height + WORKSPACE_PADDING * 2) * viewportScale()
+                  }px`,
+                }}
+              >
+                <Show when={marqueeRect()}>
+                  {(rect) => (
+                    <div
+                      class="pointer-events-none absolute z-40 border-2 border-sky-300/90 bg-sky-400/15 shadow-[0_0_0_1px_rgba(125,211,252,0.35)]"
+                      style={{
+                        left: `${(WORKSPACE_PADDING + rect().x) * viewportScale()}px`,
+                        top: `${(WORKSPACE_PADDING + rect().y) * viewportScale()}px`,
+                        width: `${rect().width * viewportScale()}px`,
+                        height: `${rect().height * viewportScale()}px`,
+                      }}
+                    />
+                  )}
+                </Show>
+
+                <For each={selectedScene().nodes}>
+                  {(node) => {
+                    const isSelected = createMemo(() => selectedNodeSet().has(node.id));
+                    return (
+                      <div
+                        class="absolute select-none touch-none"
+                        classList={{
+                          "outline outline-2 outline-offset-[2px] outline-amber-300 shadow-[0_0_0_6px_rgba(255,205,100,0.28),0_0_18px_4px_rgba(255,205,100,0.35)] z-20":
+                            isSelected(),
+                        }}
+                        style={{
+                          left: `${(WORKSPACE_PADDING + node.x) * viewportScale()}px`,
+                          top: `${(WORKSPACE_PADDING + node.y) * viewportScale()}px`,
+                          width: `${node.width * viewportScale()}px`,
+                          height: `${node.height * viewportScale()}px`,
+                          transform: `rotate(${node.rotation}deg)`,
+                        }}
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          handleStartDrag(node.id, event);
+                        }}
+                      >
+                        <Show when={hasAnyCollision(node.collisions)}>
+                          <div
+                            class="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-amber-300/20 opacity-25"
+                            classList={{ "bg-amber-300/90 opacity-100": node.collisions.top }}
+                          />
+                          <div
+                            class="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-amber-300/20 opacity-25"
+                            classList={{ "bg-amber-300/90 opacity-100": node.collisions.right }}
+                          />
+                          <div
+                            class="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-amber-300/20 opacity-25"
+                            classList={{ "bg-amber-300/90 opacity-100": node.collisions.bottom }}
+                          />
+                          <div
+                            class="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-amber-300/20 opacity-25"
+                            classList={{ "bg-amber-300/90 opacity-100": node.collisions.left }}
+                          />
+                        </Show>
+
+                        <Show when={node.locked}>
+                          <div class="pointer-events-none absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded bg-amber-300/20 text-[#ffd991] ring-1 ring-amber-300/40">
+                            <Lock class="h-3 w-3" />
+                          </div>
+                        </Show>
+
+                        <Show when={isSelected() && selectedNodeIds().length === 1 && !node.locked}>
+                          <div
+                            class="pointer-events-none absolute left-1/2 z-40 h-4 w-px -translate-x-1/2 bg-[#ffd58a]/70"
+                            style={{ top: "-22px" }}
+                          />
+                          <div
+                            class="absolute left-1/2 z-40 grid h-4 w-4 -translate-x-1/2 cursor-grab place-items-center rounded-full border border-[rgba(45,25,15,0.6)] bg-[#ffd58a] text-[#2d190f]"
+                            style={{ top: "-34px" }}
+                            title="Rotate"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              handleStartRotate(node.id, event);
+                            }}
+                          >
+                            <RotateCw class="h-2.5 w-2.5" />
+                          </div>
+                          <div
+                            class="absolute -top-[5px] -left-[5px] z-40 h-2.5 w-2.5 cursor-nwse-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              handleStartResize(node.id, "nw", event);
+                            }}
+                          />
+                          <div
+                            class="absolute -top-[5px] -right-[5px] z-40 h-2.5 w-2.5 cursor-nesw-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              handleStartResize(node.id, "ne", event);
+                            }}
+                          />
+                          <div
+                            class="absolute -bottom-[5px] -left-[5px] z-40 h-2.5 w-2.5 cursor-nesw-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              handleStartResize(node.id, "sw", event);
+                            }}
+                          />
+                          <div
+                            class="absolute -right-[5px] -bottom-[5px] z-40 h-2.5 w-2.5 cursor-nwse-resize rounded-[2px] border border-[rgba(45,25,15,0.6)] bg-[#ffd58a]"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              handleStartResize(node.id, "se", event);
+                            }}
+                          />
+                        </Show>
+                      </div>
+                    );
+                  }}
+                </For>
+
+                <Show when={singleSelectedNode()}>
+                  {(node) => (
+                    <div
+                      class="absolute z-50 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-full border border-white/10 bg-[rgba(18,15,13,0.78)] p-[3px] shadow-[0_14px_36px_rgba(0,0,0,0.38)] backdrop-blur-xl"
+                      style={{
+                        left: `${toolbarPosition()!.left}px`,
+                        top: `${toolbarPosition()!.top}px`,
+                      }}
+                      onPointerDown={(event) => event.stopPropagation()}
+                    >
+                      <PopoverRoot
+                        open={nodeStyleId() === node().id}
+                        onOpenChange={(open, event, reason) => {
+                          if (!open && event && (reason === "outside-press" || reason === "focus-out")) {
+                            const target = event.target as Node | null;
+                            if (target && stylePopoverContentEl?.contains(target)) return;
+                          }
+                          setNodeStyleId(open ? node().id : null);
+                        }}
+                      >
+                        <PopoverTrigger class="rounded-full border border-transparent bg-transparent px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-white/60 transition hover:border-white/10 hover:bg-white/8 hover:text-white/90">
+                          Style
+                        </PopoverTrigger>
+                        <PopoverContent
+                          ref={(el) => {
+                            stylePopoverContentEl = el;
+                          }}
+                          side="top"
+                          collisionPadding={12}
+                          sticky
+                          class="w-auto min-w-0"
+                        >
+                          <PopoverSection class="gap-1.5 p-2">
+                            <div class="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1 text-[10px]">
+                              <span class="uppercase tracking-[0.12em] text-white/40">Size</span>
+                              <input
+                                class="w-24 rounded border border-white/8 bg-white/5 px-1.5 py-1 text-[11px] text-white outline-none focus:border-white/16"
+                                value={node().style.backgroundSize ?? "100% 100%"}
+                                onInput={(event) => {
+                                  const value = event.currentTarget.value.trim();
+                                  updateNode(node().id, (draft) => {
+                                    if (value) draft.style.backgroundSize = value;
+                                    else delete draft.style.backgroundSize;
+                                  });
+                                }}
+                              />
+                              <span class="uppercase tracking-[0.12em] text-white/40">Repeat</span>
+                              <Select
+                                value={node().style.backgroundRepeat ?? "no-repeat"}
+                                onValueChange={(value) =>
+                                  updateNode(node().id, (draft) => {
+                                    draft.style.backgroundRepeat = value;
+                                  })
+                                }
+                              >
+                                <SelectTrigger size="sm" class="w-24 text-[11px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent container={stylePopoverContentEl}>
+                                  <SelectItem value="no-repeat">no-repeat</SelectItem>
+                                  <SelectItem value="repeat">repeat</SelectItem>
+                                  <SelectItem value="repeat-x">repeat-x</SelectItem>
+                                  <SelectItem value="repeat-y">repeat-y</SelectItem>
+                                  <SelectItem value="space">space</SelectItem>
+                                  <SelectItem value="round">round</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <span class="uppercase tracking-[0.12em] text-white/40">Position</span>
+                              <input
+                                class="w-24 rounded border border-white/8 bg-white/5 px-1.5 py-1 text-[11px] text-white outline-none focus:border-white/16"
+                                value={node().style.backgroundPosition ?? "center"}
+                                onInput={(event) => {
+                                  const value = event.currentTarget.value.trim();
+                                  updateNode(node().id, (draft) => {
+                                    if (value) draft.style.backgroundPosition = value;
+                                    else delete draft.style.backgroundPosition;
+                                  });
+                                }}
+                              />
+                              <span class="uppercase tracking-[0.12em] text-white/40">Opacity</span>
+                              <input
+                                class="w-24 rounded border border-white/8 bg-white/5 px-1.5 py-1 text-[11px] text-white outline-none focus:border-white/16"
+                                type="number"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={node().opacity}
+                                onInput={(event) =>
+                                  updateNode(node().id, (draft) => {
+                                    draft.opacity = clamp(
+                                      Number(event.currentTarget.value) || 0,
+                                      0,
+                                      1
+                                    );
+                                  })
+                                }
+                              />
+                            </div>
+                          </PopoverSection>
+                        </PopoverContent>
+                      </PopoverRoot>
+
+                      <PopoverRoot
+                        open={collisionEditorId() === node().id}
+                        onOpenChange={(open) => setCollisionEditorId(open ? node().id : null)}
+                      >
+                        <PopoverTrigger
+                          class="grid h-6 w-6 place-items-center rounded-md border border-transparent bg-transparent text-white/60 transition-all outline-none hover:bg-white/8 hover:text-white/90 focus-visible:border-white/12 focus-visible:ring-2 focus-visible:ring-white/15 aria-[expanded=true]:bg-white/8 aria-[expanded=true]:text-white/90 aria-[pressed=true]:border-amber-300/40 aria-[pressed=true]:bg-amber-300/15 aria-[pressed=true]:text-[#ffd58a]"
+                          aria-pressed={hasAnyCollision(node().collisions)}
+                          title="Collision sides"
+                        >
+                          <CollisionIcon class="h-3.5 w-3.5" />
+                        </PopoverTrigger>
+                        <PopoverContent
+                          side="top"
+                          collisionPadding={12}
+                          sticky
+                          class="w-auto p-[3px]"
+                        >
+                          <div class="flex items-center gap-0.5">
+                            {(
+                              [
+                                ["top", "Top", ArrowUpToLine],
+                                ["left", "Left", ArrowLeftToLine],
+                                ["bottom", "Bottom", ArrowDownToLine],
+                                ["right", "Right", ArrowRightToLine],
+                              ] as const
+                            ).map(([side, title, Icon]) => (
+                              <button
+                                type="button"
+                                title={title}
+                                aria-pressed={node().collisions[side]}
+                                class="grid h-6 w-6 place-items-center rounded-md border border-transparent bg-transparent text-white/60 transition hover:border-white/10 hover:bg-white/8 hover:text-white/90 aria-[pressed=true]:border-amber-300/40 aria-[pressed=true]:bg-amber-300/15 aria-[pressed=true]:text-[#ffd58a]"
+                                onClick={() =>
+                                  updateNode(node().id, (draft) => {
+                                    draft.collisions[side] = !draft.collisions[side];
+                                  })
+                                }
+                              >
+                                <Icon class="h-3 w-3" />
+                              </button>
+                            ))}
+                            <span class="mx-0.5 h-4 w-px bg-white/10" />
+                            <button
+                              type="button"
+                              title={
+                                hasAnyCollision(node().collisions) ? "Disable all" : "Enable all"
+                              }
+                              aria-pressed={hasAnyCollision(node().collisions)}
+                              class="grid h-6 w-6 place-items-center rounded-md border border-transparent bg-transparent text-white/60 transition hover:border-white/10 hover:bg-white/8 hover:text-white/90 aria-[pressed=true]:border-amber-300/40 aria-[pressed=true]:bg-amber-300/15 aria-[pressed=true]:text-[#ffd58a]"
+                              onClick={() =>
+                                updateNode(node().id, (draft) => {
+                                  const next = !hasAnyCollision(draft.collisions);
+                                  draft.collisions.top = next;
+                                  draft.collisions.right = next;
+                                  draft.collisions.bottom = next;
+                                  draft.collisions.left = next;
+                                })
+                              }
+                            >
+                              <CollisionIcon class="h-3 w-3" />
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </PopoverRoot>
+
+                      <Button
+                        variant={node().locked ? "default" : "ghost"}
+                        size="icon-sm"
+                        title={node().locked ? "Unlock" : "Lock"}
+                        onClick={() =>
+                          updateNode(node().id, (draft) => (draft.locked = !draft.locked))
+                        }
+                      >
+                        {node().locked ? <Lock /> : <LockOpen />}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon-sm"
+                        title="Delete"
+                        disabled={!selectedUnlockedNodeIds().length}
+                        onClick={handleDeleteSelected}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  )}
+                </Show>
+              </div>
+            </div>
+          </div>
+
+          <Show when={interaction()?.type === "resize"}>
+            <div class="pointer-events-none absolute top-3 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-black/70 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-white/70 shadow-md backdrop-blur">
+              {shiftHeld() ? "Free-form resize" : "Hold Shift — free-form resize"}
+            </div>
+          </Show>
         </div>
       </main>
     </div>
