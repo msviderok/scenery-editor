@@ -1,6 +1,13 @@
-import { render } from "solid-js/web";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./main.css";
 
-render(() => <App />, document.getElementById("root")!);
-
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <TooltipProvider>
+      <App />
+    </TooltipProvider>
+  </StrictMode>,
+);

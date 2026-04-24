@@ -1,0 +1,85 @@
+/* BoldKit Theme - Light & Dark Mode */
+:root {
+  /* Base Colors */
+  --background: oklch(0.986 0.001 106.42);
+  --foreground: oklch(0.207 0.01 285.49);
+
+  /* Primary */
+  --primary: oklch(0.814 0.112 2.56);
+  --primary-foreground: oklch(0.207 0.01 285.49);
+
+  /* Secondary */
+  --secondary: oklch(0.876 0.074 166.09);
+  --secondary-foreground: oklch(0.207 0.01 285.49);
+
+  /* Accent */
+  --accent: oklch(0.794 0.078 299.89);
+  --accent-foreground: oklch(0.207 0.01 285.49);
+
+  /* Muted */
+  --muted: oklch(0.269 0.082 271.36);
+  --muted-foreground: oklch(0.55 0.014 285.92);
+
+  /* Card & Popover */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.207 0.01 285.49);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.207 0.01 285.49);
+
+  /* Destructive */
+  --destructive: oklch(0.636 0.208 25.38);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Border & Input */
+  --border: oklch(0.207 0.01 285.49);
+  --input: oklch(0.207 0.01 285.49);
+  --ring: oklch(0.207 0.01 285.49);
+
+  /* Radius - Minimal for neubrutalism */
+  --radius: 0rem;
+
+  /* BoldKit specific */
+  --shadow-color: oklch(0.207 0.01 285.49);
+  --shadow-offset: 5px;
+  --border-width: 4px;
+}
+
+.dark {
+  /* Base Colors */
+  --background: oklch(0.207 0.01 285.49);
+  --foreground: oklch(0.986 0.001 106.42);
+
+  /* Primary */
+  --primary: oklch(0.814 0.112 2.56);
+  --primary-foreground: oklch(0.207 0.01 285.49);
+
+  /* Secondary */
+  --secondary: oklch(0.876 0.074 166.09);
+  --secondary-foreground: oklch(0.207 0.01 285.49);
+
+  /* Accent */
+  --accent: oklch(0.794 0.078 299.89);
+  --accent-foreground: oklch(0.207 0.01 285.49);
+
+  /* Muted */
+  --muted: oklch(0.305 0.018 285.27);
+  --muted-foreground: oklch(0.736 0.013 106.71);
+
+  /* Card & Popover */
+  --card: oklch(0.247 0.013 285.37);
+  --card-foreground: oklch(0.986 0.001 106.42);
+  --popover: oklch(0.247 0.013 285.37);
+  --popover-foreground: oklch(0.986 0.001 106.42);
+
+  /* Destructive */
+  --destructive: oklch(0.636 0.208 25.38);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Border & Input */
+  --border: oklch(0.986 0.001 106.42);
+  --input: oklch(0.986 0.001 106.42);
+  --ring: oklch(0.986 0.001 106.42);
+
+  /* Shadow */
+  --shadow-color: oklch(0 0 0);
+}

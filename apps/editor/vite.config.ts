@@ -1,10 +1,16 @@
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
-import solid from "vite-plugin-solid";
+import babel from "@rolldown/plugin-babel";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import { defineConfig } from "vite-plus";
 import { spriteEditorSpriteLibrary } from "../../packages/vite-plugin/src";
 
 export default defineConfig({
-  plugins: [tailwindcss(), solid(), spriteEditorSpriteLibrary()],
+  plugins: [
+    tailwindcss(),
+    react(),
+    babel({ presets: [reactCompilerPreset()] }),
+    spriteEditorSpriteLibrary(),
+  ],
   resolve: {
     tsconfigPaths: true,
   },
@@ -13,5 +19,9 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
   },
 });

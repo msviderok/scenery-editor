@@ -1,16 +1,16 @@
 {
   "name": "sprite-editor-workspace",
   "private": true,
-  "packageManager": "pnpm@10.33.0",
-  "pnpm": {
-    "overrides": {
-      "babel-preset-solid": "1.9.6"
-    }
-  },
+  "type": "module",
   "scripts": {
-    "dev": "pnpm --filter editor-react dev",
-    "build": "pnpm --filter editor-react build && pnpm --filter @msviderok/sprite-editor-vite build",
+    "dev": "pnpm --filter editor dev",
+    "build": "pnpm --filter editor build && pnpm --filter @msviderok/sprite-editor-vite build",
     "dev:playground": "pnpm --filter @msviderok/sprite-editor-vite build && pnpm --filter plugin-playground dev",
-    "build:playground": "pnpm --filter @msviderok/sprite-editor-vite build && pnpm --filter plugin-playground build"
-  }
+    "build:playground": "pnpm --filter @msviderok/sprite-editor-vite build && pnpm --filter plugin-playground build",
+    "prepare": "vp config"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@10.33.0"
 }

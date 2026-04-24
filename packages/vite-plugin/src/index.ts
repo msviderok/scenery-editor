@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, type Dirent } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import type { Plugin } from "vite";
+import type { Plugin } from "vite-plus";
 import { parseSpriteProject, type ResolvedSpriteProject } from "../../../shared/ast";
 
 const VIRTUAL_PROJECT_PREFIX = "\0sprite-editor-project:";
@@ -53,7 +53,7 @@ export type SpriteLibraryEntry = {
 
 async function walkSpritesDirectory(dir: string, rootDir: string): Promise<SpriteLibraryEntry[]> {
   let entries: SpriteLibraryEntry[] = [];
-  let dirents: Awaited<ReturnType<typeof readdir>>;
+  let dirents: Dirent<string>[];
 
   try {
     dirents = await readdir(dir, { withFileTypes: true });
@@ -99,7 +99,7 @@ export function spriteEditorSpriteLibrary(options: SpriteLibraryPluginOptions = 
       statusCode?: number;
       setHeader(name: string, value: string): void;
       end(chunk?: string): void;
-    }
+    },
   ) => {
     const pathname = url.split("?")[0];
     if (pathname === SPRITES_MANIFEST_ROUTE) {
@@ -133,7 +133,7 @@ export function spriteEditorSpriteLibrary(options: SpriteLibraryPluginOptions = 
       res.statusCode = 200;
       res.setHeader(
         "Content-Type",
-        MIME_BY_EXT[path.extname(filePath).toLowerCase()] ?? "application/octet-stream"
+        MIME_BY_EXT[path.extname(filePath).toLowerCase()] ?? "application/octet-stream",
       );
       createReadStream(filePath).pipe(res);
       return true;
