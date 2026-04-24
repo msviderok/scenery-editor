@@ -1,5 +1,5 @@
-export const WORKSPACE_PADDING = 240;
-export const MIN_NODE_SIZE = 24;
+export const WORKSPACE_PADDING = 0;
+export const MIN_NODE_SIZE = 4;
 export const MIN_SCENE_SIZE = 64;
 export const AUTOSAVE_DELAY_MS = 120;
 export const PERSISTENCE_VERSION = 1;
@@ -25,3 +25,10 @@ export const SOLID_PERSISTENCE_SLOT_KEYS = [
 export const SPRITES_MANIFEST_ROUTE = "/__sprite-editor__/sprites.json";
 export const PROJECT_ASSET_MIME = "application/x-sprite-asset";
 export const FOLDER_ASSET_MIME = "application/x-sprite-folder-asset";
+
+export const SCENE_PRESETS = [
+  { width: 640, height: 360 },
+  { width: 1280, height: 720 },
+  { width: 1920, height: 1080 },
+  { width: 800, height: 600 },
+] as const;

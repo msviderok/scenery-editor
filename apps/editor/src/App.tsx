@@ -1,9 +1,11 @@
 import { AssetsPanel } from "@/components/editor/AssetsPanel";
+import { NewSceneModal } from "@/components/editor/NewSceneModal";
+import { SceneTabs } from "@/components/editor/SceneTabs";
 import { ScenesPanel } from "@/components/editor/ScenesPanel";
 import { Workspace } from "@/components/editor/Workspace";
-import { Button, buttonVariants } from "@/components/ui/button";
 import {
   buildEmbeddedExportProject,
+  readFileAsDataUrl,
   readImageSize,
   serializeEmbeddedProject,
 } from "@/editor/assets";
@@ -12,17 +14,18 @@ import { nextId, swapAtIndex } from "@/editor/geometry";
 import { getNextPersistenceSlot } from "@/editor/persistence";
 import { useEditorEffects } from "@/editor/useEditorEffects";
 import { useEditorState } from "@/editor/useEditorState";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { createDefaultScene, parseSpriteProject, type SpriteAsset } from "../../../shared/ast";
 
 export default function App() {
   const workspaceRef = useRef<HTMLDivElement>(null);
-  const stylePopoverContentRef = useRef<HTMLDivElement>(null);
   const folderSpriteSizeCacheRef = useRef(new Map<string, { width: number; height: number }>());
   const autosaveTimerRef = useRef<number | null>(null);
   const pendingPersistencePayloadRef = useRef<string | null>(null);
   const nextPersistenceSlotRef = useRef<0 | 1>(getNextPersistenceSlot());
   const restoredWorkspaceScrollRef = useRef(false);
+
+  const [newSceneOpen, setNewSceneOpen] = useState(false);
 
   const { state, dispatch, mutate, updateScene, updateNode, selectors } = useEditorState();
 
@@ -36,6 +39,25 @@ export default function App() {
     nextPersistenceSlotRef,
     restoredWorkspaceScrollRef,
   });
+
+  const refreshFolderSprites = async () => {
+    const response = await fetch(SPRITES_MANIFEST_ROUTE, { cache: "no-store" });
+    if (!response.ok) {
+      dispatch({ type: "setFolderSprites", folderSprites: [] });
+      return;
+    }
+
+    const sprites = (await response.json()) as typeof state.folderSprites;
+    dispatch({ type: "setFolderSprites", folderSprites: sprites });
+    for (const sprite of sprites) {
+      if (folderSpriteSizeCacheRef.current.has(sprite.url)) continue;
+      void readImageSize(sprite.url)
+        .then((size) => {
+          folderSpriteSizeCacheRef.current.set(sprite.url, size);
+        })
+        .catch(() => {});
+    }
+  };
 
   const handleExport = async () => {
     const embeddedProject = await buildEmbeddedExportProject(state.project);
@@ -63,6 +85,35 @@ export default function App() {
     });
   };
 
+  const handleUploadImages = async (files: FileList | null) => {
+    if (!files?.length) return;
+
+    const entries = await Promise.all(
+      [...files]
+        .filter((file) => file.type.startsWith("image/"))
+        .map(async (file) => {
+          const dataUrl = await readFileAsDataUrl(file);
+          const size = await readImageSize(dataUrl);
+          return {
+            id: nextId("asset", Object.keys(state.project.assets)),
+            kind: "image" as const,
+            fileName: file.name,
+            width: size.width,
+            height: size.height,
+            mimeType: file.type,
+            dataUrl,
+          };
+        }),
+    );
+
+    mutate((draft) => {
+      for (const asset of entries) {
+        const uniqueId = nextId("asset", Object.keys(draft.project.assets));
+        draft.project.assets[uniqueId] = { ...asset, id: uniqueId };
+      }
+    });
+  };
+
   const handleDeleteSelected = () => {
     const deletableIds = new Set(selectors.selectedUnlockedNodeIds);
     if (!deletableIds.size) return;
@@ -83,151 +134,225 @@ export default function App() {
     });
   };
 
-  const refreshFolderSprites = async () => {
-    const response = await fetch(SPRITES_MANIFEST_ROUTE, { cache: "no-store" });
-    if (!response.ok) {
-      dispatch({ type: "setFolderSprites", folderSprites: [] });
-      return;
-    }
+  const handleDuplicateNode = (nodeId: string) => {
+    mutate((draft) => {
+      const scene = draft.project.scenes.find((entry) => entry.id === draft.selectedSceneId);
+      if (!scene) return;
 
-    const sprites = (await response.json()) as typeof state.folderSprites;
-    dispatch({ type: "setFolderSprites", folderSprites: sprites });
-    for (const sprite of sprites) {
-      if (folderSpriteSizeCacheRef.current.has(sprite.url)) continue;
-      void readImageSize(sprite.url)
-        .then((size) => {
-          folderSpriteSizeCacheRef.current.set(sprite.url, size);
-        })
-        .catch(() => {});
-    }
+      const source = scene.nodes.find((node) => node.id === nodeId);
+      if (!source) return;
+
+      const duplicateId = nextId(
+        "node",
+        scene.nodes.map((node) => node.id),
+      );
+
+      scene.nodes.push({
+        ...source,
+        id: duplicateId,
+        x: source.x + 20,
+        y: source.y + 20,
+        collisions: { ...source.collisions },
+        style: { ...source.style },
+      });
+      draft.selectedNodeIds = [duplicateId];
+    });
   };
 
-  const projectAssets = Object.values(state.project.assets);
+  const handleBringForward = (nodeId: string) => {
+    mutate((draft) => {
+      const scene = draft.project.scenes.find((entry) => entry.id === draft.selectedSceneId);
+      if (!scene) return;
+      const index = scene.nodes.findIndex((node) => node.id === nodeId);
+      if (index === -1 || index === scene.nodes.length - 1) return;
+      scene.nodes = swapAtIndex(scene.nodes, index, index + 1);
+    });
+  };
+
+  const handleSendBackward = (nodeId: string) => {
+    mutate((draft) => {
+      const scene = draft.project.scenes.find((entry) => entry.id === draft.selectedSceneId);
+      if (!scene) return;
+      const index = scene.nodes.findIndex((node) => node.id === nodeId);
+      if (index <= 0) return;
+      scene.nodes = swapAtIndex(scene.nodes, index, index - 1);
+    });
+  };
+
+  const handleCreateScene = (params: { name: string; width: number; height: number }) => {
+    mutate((draft) => {
+      const id = nextId(
+        "scene",
+        draft.project.scenes.map((scene) => scene.id),
+      );
+      const nextScene = createDefaultScene(id, params.name);
+      nextScene.size.width = params.width;
+      nextScene.size.height = params.height;
+      draft.project.scenes.push(nextScene);
+      draft.selectedSceneId = id;
+      draft.selectedNodeIds = [];
+    });
+    setNewSceneOpen(false);
+  };
+
+  const handleCloseScene = (sceneId: string) => {
+    mutate((draft) => {
+      if (draft.project.scenes.length <= 1) return;
+      const currentIndex = draft.project.scenes.findIndex((scene) => scene.id === sceneId);
+      if (currentIndex === -1) return;
+      draft.project.scenes = draft.project.scenes.filter((scene) => scene.id !== sceneId);
+      const nextScene =
+        draft.project.scenes[Math.min(currentIndex, draft.project.scenes.length - 1)];
+      if (nextScene) {
+        draft.selectedSceneId = nextScene.id;
+      }
+      draft.selectedNodeIds = [];
+    });
+  };
+
+  const projectAssets = Object.values(state.project.assets).sort((left, right) =>
+    left.fileName.localeCompare(right.fileName),
+  );
   const projectAssetsBySourcePath = new Map<string, SpriteAsset>(
     projectAssets
       .filter((asset): asset is SpriteAsset & { sourcePath: string } => Boolean(asset.sourcePath))
       .map((asset) => [asset.sourcePath!, asset]),
   );
 
+  const selectedAsset = selectors.singleSelectedNode
+    ? (state.project.assets[selectors.singleSelectedNode.assetId] ?? null)
+    : null;
+
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground lg:grid lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {state.persistenceError ? (
-        <div className="col-span-full border-b-2 border-border bg-secondary-background px-4 py-2 text-xs font-medium text-foreground">
+        <div className="shrink-0 border-b border-[#e76464]/50 bg-[#281313] px-4 py-2 font-mono text-[10px] font-medium text-[#f0b1b1]">
           {state.persistenceError}
         </div>
       ) : null}
 
-      <aside className="flex h-screen max-h-screen flex-col gap-3 overflow-hidden border-b-2 border-border bg-secondary-background p-4 lg:sticky lg:top-0 lg:border-r lg:border-b-0">
-        <div className="shrink-0 rounded-2xl border-2 border-border bg-background p-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-muted-foreground text-[10px] uppercase tracking-[0.22em]">
-                Sprite editor
-              </div>
-              <h1 className="text-[15px] font-semibold">Scene authoring</h1>
-            </div>
-            <Button size="sm" onClick={() => void handleExport()}>
-              Export AST
-            </Button>
-          </div>
-
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            <label
-              className={`${buttonVariants({ variant: "neutral", size: "sm" })} relative cursor-pointer overflow-hidden text-[11px] uppercase tracking-[0.08em]`}
-            >
-              <span>Import AST</span>
-              <input
-                className="hidden"
-                type="file"
-                accept=".json,.sprite.json"
-                onChange={(event) => {
-                  void handleImportProject(event.currentTarget.files?.[0]);
-                }}
-              />
-            </label>
-          </div>
-        </div>
-
-        <ScenesPanel
-          project={state.project}
-          selectedScene={selectors.selectedScene}
-          selectedSceneId={state.selectedSceneId}
-          gridVisible={state.gridVisible}
-          gridSize={state.gridSize}
-          onAddScene={() => {
-            mutate((draft) => {
-              const id = nextId(
-                "scene",
-                draft.project.scenes.map((scene) => scene.id),
-              );
-              draft.project.scenes.push(
-                createDefaultScene(id, `Scene ${draft.project.scenes.length + 1}`),
-              );
-              draft.selectedSceneId = id;
-              draft.selectedNodeIds = [];
-            });
-          }}
-          onDeleteScene={() => {
-            mutate((draft) => {
-              const current = draft.project.scenes.find(
-                (scene) => scene.id === draft.selectedSceneId,
-              );
-              if (!current) return;
-              draft.project.scenes = draft.project.scenes.filter(
-                (scene) => scene.id !== current.id,
-              );
-              const nextScene = draft.project.scenes[0];
-              if (nextScene) {
-                draft.selectedSceneId = nextScene.id;
-              }
-              draft.selectedNodeIds = [];
-            });
-          }}
-          onSelectScene={(sceneId) =>
+      <header className="flex h-[42px] shrink-0 items-stretch border-b border-white/10 bg-[#1a1a1a]">
+        <SceneTabs
+          scenes={state.project.scenes}
+          activeSceneId={state.selectedSceneId}
+          onSelect={(sceneId) =>
             mutate((draft) => {
               draft.selectedSceneId = sceneId;
               draft.selectedNodeIds = [];
             })
           }
-          onMoveScene={(from, to) =>
+          onClose={handleCloseScene}
+          onAdd={() => setNewSceneOpen(true)}
+          onReorder={(from, to) =>
             mutate((draft) => {
               draft.project.scenes = swapAtIndex(draft.project.scenes, from, to);
             })
           }
-          onUpdateScene={updateScene}
-          onSetGridVisible={(visible) =>
-            mutate((draft) => {
-              draft.gridVisible = visible;
-            })
-          }
-          onSetGridSize={(gridSize) =>
-            mutate((draft) => {
-              draft.gridSize = gridSize;
-            })
-          }
         />
 
-        <AssetsPanel
-          folderSprites={state.folderSprites}
-          projectAssets={projectAssets}
-          projectAssetsBySourcePath={projectAssetsBySourcePath}
-          dragGhost={state.dragGhost}
+        <div className="flex shrink-0 items-center gap-2 px-3">
+          <label className="sb-button sb-button-compact sb-button-muted h-8 cursor-pointer px-3">
+            <span>Import</span>
+            <input
+              hidden
+              type="file"
+              accept=".json,.sprite.json"
+              onChange={(event) => {
+                void handleImportProject(event.currentTarget.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+
+          <button
+            type="button"
+            className="sb-button sb-button-compact sb-button-accent h-8 px-3"
+            onClick={() => void handleExport()}
+          >
+            Export
+          </button>
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <aside className="flex min-h-0 w-[176px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#171717]">
+          <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
+            <button
+              type="button"
+              title={state.gridVisible ? "Hide grid" : "Show grid"}
+              onClick={() =>
+                mutate((draft) => {
+                  draft.gridVisible = !draft.gridVisible;
+                })
+              }
+              className={`grid h-7 w-7 place-items-center border text-[10px] font-bold transition-colors ${
+                state.gridVisible
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                  : "border-white/14 bg-white/[0.03] text-white/54 hover:border-[var(--accent)]/55 hover:text-white"
+              }`}
+            >
+              #
+            </button>
+
+            <div className="flex-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/38">
+              Grid
+            </div>
+
+            <input
+              type="number"
+              min={4}
+              max={128}
+              value={state.gridSize}
+              onChange={(event) =>
+                mutate((draft) => {
+                  draft.gridSize = Math.max(
+                    4,
+                    Math.min(128, Number(event.currentTarget.value) || 32),
+                  );
+                })
+              }
+              className="sb-input h-7 w-14 px-2 text-center font-mono text-[11px]"
+            />
+          </div>
+
+          <AssetsPanel
+            folderSprites={state.folderSprites}
+            projectAssets={projectAssets}
+            projectAssetsBySourcePath={projectAssetsBySourcePath}
+            folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
+            mutate={mutate}
+            onRefresh={() => void refreshFolderSprites()}
+            onUploadFiles={(files) => void handleUploadImages(files)}
+          />
+
+          <ScenesPanel
+            selectedScene={selectors.selectedScene}
+            selectedNode={selectors.singleSelectedNode}
+            selectedAsset={selectedAsset}
+            onUpdateScene={updateScene}
+            onUpdateNode={updateNode}
+          />
+        </aside>
+
+        <Workspace
+          state={state}
+          selectors={selectors}
+          workspaceRef={workspaceRef}
           folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-          onRefresh={() => void refreshFolderSprites()}
           mutate={mutate}
+          dispatch={dispatch}
+          updateNode={updateNode}
+          onDeleteSelected={handleDeleteSelected}
+          onDuplicateNode={handleDuplicateNode}
+          onBringForward={handleBringForward}
+          onSendBackward={handleSendBackward}
         />
-      </aside>
+      </div>
 
-      <Workspace
-        state={state}
-        selectors={selectors}
-        workspaceRef={workspaceRef}
-        stylePopoverContentRef={stylePopoverContentRef}
-        folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-        mutate={mutate}
-        dispatch={dispatch}
-        updateNode={updateNode}
-        onDeleteSelected={handleDeleteSelected}
+      <NewSceneModal
+        open={newSceneOpen}
+        onClose={() => setNewSceneOpen(false)}
+        onCreate={handleCreateScene}
       />
     </div>
   );

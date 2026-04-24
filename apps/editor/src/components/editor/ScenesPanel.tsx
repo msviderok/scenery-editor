@@ -1,258 +1,280 @@
-import {
-  ChevronDown,
-  ArrowDown as IconArrowDown,
-  ArrowUp as IconArrowUp,
-  Plus as IconPlus,
-  Trash2,
-} from "lucide-react";
-import { type BackgroundStyle, type SpriteProject } from "../../../../../shared/ast";
-import { MIN_SCENE_SIZE } from "@/editor/constants";
-import { clampGridSize } from "@/editor/geometry";
-import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import type { SpriteAsset, SpriteNode, SpriteProject } from "../../../../../shared/ast";
 
 type ScenesPanelProps = {
-  project: SpriteProject;
   selectedScene: SpriteProject["scenes"][number];
-  selectedSceneId: string;
-  gridVisible: boolean;
-  gridSize: number;
-  onAddScene: () => void;
-  onDeleteScene: () => void;
-  onSelectScene: (sceneId: string) => void;
-  onMoveScene: (from: number, to: number) => void;
+  selectedNode: SpriteNode | null;
+  selectedAsset: SpriteAsset | null;
   onUpdateScene: (updater: (scene: SpriteProject["scenes"][number]) => void) => void;
-  onSetGridVisible: (visible: boolean) => void;
-  onSetGridSize: (gridSize: number) => void;
+  onUpdateNode: (nodeId: string, updater: (node: SpriteNode) => void) => void;
 };
 
-function SceneStyleInput(props: {
-  selectedScene: SpriteProject["scenes"][number];
-  onUpdateScene: (updater: (scene: SpriteProject["scenes"][number]) => void) => void;
-  property: keyof BackgroundStyle;
-  label: string;
-  type?: "text" | "color";
-}) {
-  const { selectedScene, onUpdateScene, property, label, type = "text" } = props;
-  return (
-    <label className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-      <span>{label}</span>
-      <input
-        className={
-          type === "color"
-            ? "h-8 w-full cursor-pointer rounded-lg border border-white/8 bg-white/5 p-0.5"
-            : "w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-        }
-        type={type}
-        value={selectedScene.backgroundStyle[property] ?? (type === "color" ? "#151515" : "")}
-        onChange={(event) => {
-          const value = event.currentTarget.value.trim();
-          onUpdateScene((scene) => {
-            if (value) {
-              scene.backgroundStyle[property] = value;
-            } else {
-              delete scene.backgroundStyle[property];
-            }
-          });
-        }}
-      />
-    </label>
-  );
+const fieldLabelClass =
+  "font-[var(--font-ui)] text-[9px] font-bold uppercase tracking-[0.14em] text-white/38";
+const textInputClass =
+  "sb-input h-7 px-2 font-mono text-[11px] [font-variant-numeric:tabular-nums]";
+
+function parseNumber(value: string, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 export function ScenesPanel(props: ScenesPanelProps) {
-  const {
-    project,
-    selectedScene,
-    selectedSceneId,
-    gridVisible,
-    gridSize,
-    onAddScene,
-    onDeleteScene,
-    onSelectScene,
-    onMoveScene,
-    onUpdateScene,
-    onSetGridVisible,
-    onSetGridSize,
-  } = props;
+  const { selectedScene, selectedNode, selectedAsset, onUpdateScene, onUpdateNode } = props;
+
+  if (!selectedNode || !selectedAsset) {
+    return (
+      <div className="min-h-0 shrink-0 overflow-y-auto border-t border-white/10 px-3 py-3">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/42">
+            Scene
+          </span>
+          <span className="font-mono text-[10px] text-[var(--accent)]">
+            {selectedScene.size.width} × {selectedScene.size.height}
+          </span>
+        </div>
+
+        <label className="mb-2 flex flex-col gap-1.5">
+          <span className={fieldLabelClass}>Name</span>
+          <input
+            value={selectedScene.name}
+            className={`${textInputClass} font-[var(--font-ui)] text-white`}
+            onChange={(event) =>
+              onUpdateScene((scene) => {
+                scene.name = event.currentTarget.value;
+              })
+            }
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-1.5">
+            <span className={fieldLabelClass}>Width</span>
+            <input
+              type="number"
+              min={64}
+              value={selectedScene.size.width}
+              className={textInputClass}
+              onChange={(event) =>
+                onUpdateScene((scene) => {
+                  scene.size.width = Math.max(64, parseNumber(event.currentTarget.value, 1280));
+                })
+              }
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className={fieldLabelClass}>Height</span>
+            <input
+              type="number"
+              min={64}
+              value={selectedScene.size.height}
+              className={textInputClass}
+              onChange={(event) =>
+                onUpdateScene((scene) => {
+                  scene.size.height = Math.max(64, parseNumber(event.currentTarget.value, 720));
+                })
+              }
+            />
+          </label>
+        </div>
+      </div>
+    );
+  }
+
+  const rotationValue = ((selectedNode.rotation % 360) + 360) % 360;
 
   return (
-    <Collapsible
-      defaultOpen
-      className="rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 shrink-0 group"
-    >
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <ChevronDown className="h-3.5 w-3.5 text-white/40 transition-transform duration-200 group-data-[panel-open=false]:-rotate-90" />
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.22em] text-white/35">Scenes</div>
-            <h2 className="text-[15px] font-semibold">Sequence</h2>
-          </div>
-        </CollapsibleTrigger>
-        <Button variant="outline" size="icon-sm" title="Add scene" onClick={onAddScene}>
-          <IconPlus />
-        </Button>
+    <div className="min-h-0 max-h-[48vh] shrink-0 overflow-y-auto border-t border-white/10 px-3 py-3">
+      <div className="mb-3 min-w-0">
+        <span className="font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/42">
+          Properties
+        </span>
+        <div className="mt-1 truncate font-[var(--font-ui)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">
+          {selectedAsset.fileName}
+        </div>
       </div>
 
-      <CollapsibleContent className="flex flex-col gap-1">
-        <div className="flex flex-col gap-1">
-          {project.scenes.map((scene, index) => (
-            <div
-              key={scene.id}
-              className={`flex items-center justify-between gap-2 rounded-lg border border-white/6 bg-transparent px-2.5 py-2 transition hover:bg-white/4 ${
-                scene.id === selectedSceneId ? "border-blue-400/35 bg-blue-400/8" : ""
-              }`}
+      <label className="mb-3 flex flex-col gap-1.5">
+        <span className={fieldLabelClass}>Opacity</span>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={selectedNode.opacity}
+            className="accent-[var(--accent)]"
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, (node) => {
+                node.opacity = Math.max(0, Math.min(1, Number(event.currentTarget.value) || 0));
+              })
+            }
+          />
+          <span className="w-10 text-right font-mono text-[10px] text-white/58">
+            {Math.round(selectedNode.opacity * 100)}%
+          </span>
+        </div>
+      </label>
+
+      <div className="mb-3 flex flex-col gap-1.5">
+        <span className={fieldLabelClass}>Rotation</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_52px] items-end gap-2">
+          <input
+            type="number"
+            value={rotationValue}
+            className={textInputClass}
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, (node) => {
+                node.rotation = parseNumber(event.currentTarget.value, rotationValue);
+              })
+            }
+          />
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              className="sb-icon-button h-7 w-full text-[10px]"
+              onClick={() =>
+                onUpdateNode(selectedNode.id, (node) => {
+                  node.rotation -= 45;
+                })
+              }
             >
-              <button
-                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-left text-[13px] text-white"
-                onClick={() => onSelectScene(scene.id)}
-              >
-                <span className="block truncate">{scene.name}</span>
-              </button>
-              <span className="inline-flex gap-1">
-                <Button
-                  variant="outline"
-                  size="icon-xs"
-                  title="Move up"
-                  disabled={index === 0}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMoveScene(index, index - 1);
-                  }}
-                >
-                  <IconArrowUp />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon-xs"
-                  title="Move down"
-                  disabled={index === project.scenes.length - 1}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMoveScene(index, index + 1);
-                  }}
-                >
-                  <IconArrowDown />
-                </Button>
-              </span>
-            </div>
-          ))}
+              -45
+            </button>
+            <button
+              type="button"
+              className="sb-icon-button h-7 w-full text-[10px]"
+              onClick={() =>
+                onUpdateNode(selectedNode.id, (node) => {
+                  node.rotation += 45;
+                })
+              }
+            >
+              +45
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-1.5">
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-            <span>Name</span>
-            <input
-              className="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-              value={selectedScene.name}
-              onChange={(event) =>
-                onUpdateScene((scene) => void (scene.name = event.currentTarget.value))
-              }
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-            <span>Width</span>
-            <input
-              className="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-              type="number"
-              min={MIN_SCENE_SIZE}
-              value={selectedScene.size.width}
-              onChange={(event) =>
-                onUpdateScene(
-                  (scene) =>
-                    void (scene.size.width = Math.max(
-                      MIN_SCENE_SIZE,
-                      Number(event.currentTarget.value) || 1920,
-                    )),
-                )
-              }
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-            <span>Height</span>
-            <input
-              className="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-              type="number"
-              min={MIN_SCENE_SIZE}
-              value={selectedScene.size.height}
-              onChange={(event) =>
-                onUpdateScene(
-                  (scene) =>
-                    void (scene.size.height = Math.max(
-                      MIN_SCENE_SIZE,
-                      Number(event.currentTarget.value) || 1080,
-                    )),
-                )
-              }
-            />
-          </label>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-white/8 bg-white/[0.03] px-2 py-[7px] text-[10px] uppercase tracking-[0.12em] text-white/40">
-            <span>Show grid</span>
-            <input
-              className="m-0 accent-[#5f98ff]"
-              type="checkbox"
-              checked={gridVisible}
-              onChange={(event) => onSetGridVisible(event.currentTarget.checked)}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.12em] text-white/40">
-            <span>Grid size</span>
-            <input
-              className="w-full rounded-lg border border-white/8 bg-white/5 px-2 py-[7px] text-xs text-white outline-none transition normal-case tracking-normal focus:border-white/16 focus:bg-white/8"
-              type="number"
-              min="4"
-              max="128"
-              value={gridSize}
-              onChange={(event) =>
-                onSetGridSize(clampGridSize(Number(event.currentTarget.value) || 32))
-              }
-            />
-          </label>
-        </div>
-
-        <div className="mt-3 mb-1.5 text-[10px] uppercase tracking-[0.18em] text-white/30">
-          Scene background
-        </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          <SceneStyleInput
-            selectedScene={selectedScene}
-            onUpdateScene={onUpdateScene}
-            property="backgroundColor"
-            label="Color"
+      <div className="mb-3 flex flex-col gap-1.5">
+        <span className={fieldLabelClass}>Tint</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_70px] items-end gap-2">
+          <input
             type="color"
+            value={selectedNode.tint ?? "#ffffff"}
+            className="h-8 w-full cursor-pointer border border-white/14 bg-transparent p-1"
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, (node) => {
+                node.tint = event.currentTarget.value;
+              })
+            }
           />
-          <SceneStyleInput
-            selectedScene={selectedScene}
-            onUpdateScene={onUpdateScene}
-            property="backgroundImage"
-            label="Image"
-          />
-          <SceneStyleInput
-            selectedScene={selectedScene}
-            onUpdateScene={onUpdateScene}
-            property="backgroundSize"
-            label="Size"
-          />
-          <SceneStyleInput
-            selectedScene={selectedScene}
-            onUpdateScene={onUpdateScene}
-            property="backgroundRepeat"
-            label="Repeat"
-          />
-          <SceneStyleInput
-            selectedScene={selectedScene}
-            onUpdateScene={onUpdateScene}
-            property="backgroundPosition"
-            label="Position"
-          />
+          <button
+            type="button"
+            className="sb-button sb-button-compact sb-button-muted h-8 px-2.5 text-[10px]"
+            onClick={() =>
+              onUpdateNode(selectedNode.id, (node) => {
+                node.tint = null;
+              })
+            }
+          >
+            {selectedNode.tint ? "Clear" : "None"}
+          </button>
         </div>
+      </div>
 
-        {project.scenes.length > 1 ? (
-          <Button variant="destructive" size="sm" title="Delete scene" onClick={onDeleteScene}>
-            <Trash2 />
-          </Button>
-        ) : null}
-      </CollapsibleContent>
-    </Collapsible>
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={fieldLabelClass}>Repeat</span>
+          <select
+            value={selectedNode.style.backgroundRepeat ?? "no-repeat"}
+            className={textInputClass}
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, (node) => {
+                node.style.backgroundRepeat = event.currentTarget.value;
+              })
+            }
+          >
+            <option value="no-repeat">None</option>
+            <option value="repeat">Repeat</option>
+            <option value="repeat-x">Repeat X</option>
+            <option value="repeat-y">Repeat Y</option>
+          </select>
+        </label>
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={fieldLabelClass}>BG Size</span>
+          <select
+            value={selectedNode.style.backgroundSize ?? "contain"}
+            className={textInputClass}
+            onChange={(event) =>
+              onUpdateNode(selectedNode.id, (node) => {
+                node.style.backgroundSize = event.currentTarget.value;
+              })
+            }
+          >
+            <option value="contain">Contain</option>
+            <option value="cover">Cover</option>
+            <option value="auto">Auto</option>
+            <option value="32px">32px</option>
+            <option value="64px">64px</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={fieldLabelClass}>X / Y</span>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              value={Math.round(selectedNode.x)}
+              className={textInputClass}
+              onChange={(event) =>
+                onUpdateNode(selectedNode.id, (node) => {
+                  node.x = parseNumber(event.currentTarget.value, node.x);
+                })
+              }
+            />
+            <input
+              type="number"
+              value={Math.round(selectedNode.y)}
+              className={textInputClass}
+              onChange={(event) =>
+                onUpdateNode(selectedNode.id, (node) => {
+                  node.y = parseNumber(event.currentTarget.value, node.y);
+                })
+              }
+            />
+          </div>
+        </label>
+
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={fieldLabelClass}>W / H</span>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              min={4}
+              value={Math.round(selectedNode.width)}
+              className={textInputClass}
+              onChange={(event) =>
+                onUpdateNode(selectedNode.id, (node) => {
+                  node.width = Math.max(4, parseNumber(event.currentTarget.value, node.width));
+                })
+              }
+            />
+            <input
+              type="number"
+              min={4}
+              value={Math.round(selectedNode.height)}
+              className={textInputClass}
+              onChange={(event) =>
+                onUpdateNode(selectedNode.id, (node) => {
+                  node.height = Math.max(4, parseNumber(event.currentTarget.value, node.height));
+                })
+              }
+            />
+          </div>
+        </label>
+      </div>
+    </div>
   );
 }

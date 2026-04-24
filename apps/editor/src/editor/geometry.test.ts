@@ -39,7 +39,7 @@ describe("geometry", () => {
         gridSize: 16,
         keepAspect: false,
       }),
-    ).toEqual({ x: 30, y: 28, width: 44, height: 24 });
+    ).toEqual({ x: 30, y: 30, width: 44, height: 22 });
   });
 
   it("hit-tests marquee selection against node bounds", () => {
@@ -54,6 +54,9 @@ describe("geometry", () => {
         rotation: 0,
         opacity: 1,
         locked: false,
+        flipH: false,
+        flipV: false,
+        tint: null,
         collisions: { top: false, right: false, bottom: false, left: false },
         style: {},
       },
@@ -67,6 +70,9 @@ describe("geometry", () => {
         rotation: 0,
         opacity: 1,
         locked: false,
+        flipH: false,
+        flipV: false,
+        tint: null,
         collisions: { top: false, right: false, bottom: false, left: false },
         style: {},
       },

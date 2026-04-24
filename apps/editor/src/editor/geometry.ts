@@ -80,8 +80,8 @@ export function hitTestMarquee(nodes: SpriteNode[], rect: MarqueeRect) {
 
 export function calculateToolbarPosition(node: SpriteNode, viewportScale: number) {
   return {
-    left: (WORKSPACE_PADDING + node.x + node.width / 2) * viewportScale,
-    top: (WORKSPACE_PADDING + node.y) * viewportScale + 12,
+    left: (WORKSPACE_PADDING + node.x) * viewportScale,
+    top: (WORKSPACE_PADDING + node.y) * viewportScale - 8,
   };
 }
 

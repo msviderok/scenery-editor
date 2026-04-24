@@ -1,7 +1,7 @@
 import type { Draft } from "immer";
 import type { SpriteNode, SpriteProject } from "../../../../shared/ast";
 
-export type ResizeHandle = "nw" | "ne" | "sw" | "se";
+export type ResizeHandle = "n" | "e" | "s" | "w" | "nw" | "ne" | "sw" | "se";
 
 export type Interaction =
   | {

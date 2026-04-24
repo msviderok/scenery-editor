@@ -1,19 +1,18 @@
-import {
-  createDefaultCollision,
-  normalizeRotation,
-  type SpriteAsset,
-  type SpriteNode,
-} from "../../../../../shared/ast";
-import { readImageSize } from "@/editor/assets";
+import { readImageSize, createPlacedNode } from "@/editor/assets";
 import {
   DEFAULT_VIEWPORT_SCALE,
   FOLDER_ASSET_MIME,
   MAX_VIEWPORT_SCALE,
   MIN_VIEWPORT_SCALE,
   PROJECT_ASSET_MIME,
-  WORKSPACE_PADDING,
 } from "@/editor/constants";
-import { calculateResizeBounds, hitTestMarquee, nextId, snapToGrid } from "@/editor/geometry";
+import {
+  calculateResizeBounds,
+  clampViewportScale,
+  hitTestMarquee,
+  nextId,
+  snapToGrid,
+} from "@/editor/geometry";
 import type {
   EditorDispatch,
   EditorSelectors,
@@ -21,44 +20,153 @@ import type {
   FolderSpriteSource,
   ResizeHandle,
 } from "@/editor/types";
-import { Button } from "@/components/ui/button";
+import type { SpriteAsset, SpriteNode } from "../../../../../shared/ast";
 import { FloatingNodeToolbar } from "./FloatingNodeToolbar";
-import { ResizeHint } from "./ResizeHint";
 import { SceneCanvas } from "./SceneCanvas";
 import { SelectionOverlay } from "./SelectionOverlay";
-import { Trash2, ZoomIn, ZoomOut } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type WorkspaceProps = {
   state: EditorState;
   selectors: EditorSelectors;
   workspaceRef: React.RefObject<HTMLDivElement | null>;
-  stylePopoverContentRef: React.RefObject<HTMLDivElement | null>;
   folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
   mutate: (mutation: (draft: EditorState) => void) => void;
   dispatch: EditorDispatch;
   updateNode: (nodeId: string, updater: (node: SpriteNode) => void) => void;
   onDeleteSelected: () => void;
+  onDuplicateNode: (nodeId: string) => void;
+  onBringForward: (nodeId: string) => void;
+  onSendBackward: (nodeId: string) => void;
 };
+
+type Point = { x: number; y: number };
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+}
 
 export function Workspace(props: WorkspaceProps) {
   const {
     state,
     selectors,
     workspaceRef,
-    stylePopoverContentRef,
     folderSpriteSizeCacheRef,
     mutate,
     dispatch,
     updateNode,
     onDeleteSelected,
+    onDuplicateNode,
+    onBringForward,
+    onSendBackward,
   } = props;
 
   const selectedScene = selectors.selectedScene;
+  const zoom = state.viewportScale;
+
+  const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+
+  const panRef = useRef(pan);
+  const spaceDownRef = useRef(false);
+
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
+  useEffect(() => {
+    const element = workspaceRef.current;
+    if (!element) return;
+
+    const update = () => {
+      const rect = element.getBoundingClientRect();
+      setViewportSize({
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [workspaceRef]);
+
+  useEffect(() => {
+    if (!viewportSize.width || !viewportSize.height) return;
+
+    setPan({
+      x: Math.round((viewportSize.width - selectedScene.size.width * zoom) / 2),
+      y: Math.round((viewportSize.height - selectedScene.size.height * zoom) / 2),
+    });
+  }, [
+    selectedScene.id,
+    selectedScene.size.height,
+    selectedScene.size.width,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "Space" && !isEditableTarget(event.target)) {
+        spaceDownRef.current = true;
+      }
+
+      if (isEditableTarget(event.target)) return;
+
+      if (event.key === "Escape") {
+        mutate((draft) => {
+          draft.selectedNodeIds = [];
+        });
+      }
+
+      if ((event.key === "Delete" || event.key === "Backspace") && state.selectedNodeIds.length) {
+        event.preventDefault();
+        onDeleteSelected();
+      }
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code === "Space") {
+        spaceDownRef.current = false;
+      }
+    };
+
+    const onBlur = () => {
+      spaceDownRef.current = false;
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [mutate, onDeleteSelected, state.selectedNodeIds.length]);
+
+  const screenToWorld = (clientX: number, clientY: number) => {
+    const element = workspaceRef.current;
+    if (!element) return { x: 0, y: 0 };
+    const rect = element.getBoundingClientRect();
+
+    return {
+      x: (clientX - rect.left - panRef.current.x) / zoom,
+      y: (clientY - rect.top - panRef.current.y) / zoom,
+    };
+  };
 
   const beginPointerSession = (
     pointerId: number,
     move: (event: PointerEvent) => void,
     end?: () => void,
+    clearInteraction = true,
   ) => {
     const onMove = (event: PointerEvent) => {
       if (event.pointerId !== pointerId) return;
@@ -70,7 +178,9 @@ export function Workspace(props: WorkspaceProps) {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
-      dispatch({ type: "setInteraction", interaction: null });
+      if (clearInteraction) {
+        dispatch({ type: "setInteraction", interaction: null });
+      }
       end?.();
     };
 
@@ -79,34 +189,49 @@ export function Workspace(props: WorkspaceProps) {
     window.addEventListener("pointercancel", onUp);
   };
 
-  const adjustViewportScale = (delta: number) => {
-    mutate((draft) => {
-      draft.viewportScale = Math.min(
-        MAX_VIEWPORT_SCALE,
-        Math.max(MIN_VIEWPORT_SCALE, Math.round((draft.viewportScale + delta) * 100) / 100),
-      );
-    });
+  const startPanSession = (pointerId: number, startClientX: number, startClientY: number) => {
+    const origin = panRef.current;
+    beginPointerSession(
+      pointerId,
+      (event) => {
+        setPan({
+          x: origin.x + (event.clientX - startClientX),
+          y: origin.y + (event.clientY - startClientY),
+        });
+      },
+      undefined,
+      false,
+    );
   };
 
-  const handleSelectNode = (nodeId: string, metaKey: boolean) => {
+  const handleSelectNode = (nodeId: string, additive: boolean) => {
     mutate((draft) => {
-      if (metaKey) {
-        draft.selectedNodeIds = draft.selectedNodeIds.includes(nodeId)
-          ? draft.selectedNodeIds.filter((entry) => entry !== nodeId)
-          : [...draft.selectedNodeIds, nodeId];
+      if (!additive) {
+        draft.selectedNodeIds = [nodeId];
         return;
       }
-      draft.selectedNodeIds = [nodeId];
+
+      draft.selectedNodeIds = draft.selectedNodeIds.includes(nodeId)
+        ? draft.selectedNodeIds.filter((entry) => entry !== nodeId)
+        : [...draft.selectedNodeIds, nodeId];
     });
   };
 
   const handleStartDrag = (nodeId: string, event: React.PointerEvent<HTMLDivElement>) => {
+    if (spaceDownRef.current || event.button === 1) {
+      startPanSession(event.pointerId, event.clientX, event.clientY);
+      return;
+    }
+
     const node = selectedScene.nodes.find((entry) => entry.id === nodeId);
     if (!node) return;
-    if (event.metaKey || event.ctrlKey) {
+
+    const additive = event.metaKey || event.ctrlKey || event.shiftKey;
+    if (additive) {
       handleSelectNode(nodeId, true);
       return;
     }
+
     if (node.locked) {
       mutate((draft) => {
         draft.selectedNodeIds = [nodeId];
@@ -140,61 +265,20 @@ export function Workspace(props: WorkspaceProps) {
     });
 
     beginPointerSession(event.pointerId, (moveEvent) => {
-      const deltaX = (moveEvent.clientX - event.clientX) / state.viewportScale;
-      const deltaY = (moveEvent.clientY - event.clientY) / state.viewportScale;
+      const deltaX = (moveEvent.clientX - event.clientX) / zoom;
+      const deltaY = (moveEvent.clientY - event.clientY) / zoom;
+
       mutate((draft) => {
         const scene = draft.project.scenes.find((entry) => entry.id === selectedScene.id);
         if (!scene) return;
-        for (const targetId of activeIds) {
-          const target = scene.nodes.find((entry) => entry.id === targetId);
-          const origin = origins[targetId];
+
+        for (const activeId of activeIds) {
+          const target = scene.nodes.find((entry) => entry.id === activeId);
+          const origin = origins[activeId];
           if (!target || !origin || target.locked) continue;
           target.x = snapToGrid(origin.x + deltaX, draft.gridSize);
           target.y = snapToGrid(origin.y + deltaY, draft.gridSize);
         }
-      });
-    });
-  };
-
-  const handleStartRotate = (nodeId: string, event: React.PointerEvent<HTMLDivElement>) => {
-    event.stopPropagation();
-    const node = selectedScene.nodes.find((entry) => entry.id === nodeId);
-    const workspace = workspaceRef.current;
-    if (!node || node.locked || !workspace) return;
-
-    mutate((draft) => {
-      draft.selectedNodeIds = [nodeId];
-    });
-
-    const rect = workspace.getBoundingClientRect();
-    const centerSceneX = node.x + node.width / 2;
-    const centerSceneY = node.y + node.height / 2;
-    const centerX =
-      rect.left + (WORKSPACE_PADDING + centerSceneX) * state.viewportScale - workspace.scrollLeft;
-    const centerY =
-      rect.top + (WORKSPACE_PADDING + centerSceneY) * state.viewportScale - workspace.scrollTop;
-    const startAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX);
-
-    dispatch({
-      type: "setInteraction",
-      interaction: {
-        type: "rotate",
-        pointerId: event.pointerId,
-        nodeId,
-        centerX,
-        centerY,
-        startAngle,
-        startRotation: node.rotation,
-      },
-    });
-
-    beginPointerSession(event.pointerId, (moveEvent) => {
-      const currentAngle = Math.atan2(moveEvent.clientY - centerY, moveEvent.clientX - centerX);
-      const deltaDeg = ((currentAngle - startAngle) * 180) / Math.PI;
-      let next = normalizeRotation(node.rotation + deltaDeg);
-      if (moveEvent.shiftKey) next = Math.round(next / 15) * 15;
-      updateNode(nodeId, (draft) => {
-        draft.rotation = next;
       });
     });
   };
@@ -204,7 +288,6 @@ export function Workspace(props: WorkspaceProps) {
     handle: ResizeHandle,
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
-    event.stopPropagation();
     const node = selectedScene.nodes.find((entry) => entry.id === nodeId);
     if (!node || node.locked) return;
 
@@ -227,90 +310,74 @@ export function Workspace(props: WorkspaceProps) {
     });
 
     beginPointerSession(event.pointerId, (moveEvent) => {
-      const deltaX = (moveEvent.clientX - event.clientX) / state.viewportScale;
-      const deltaY = (moveEvent.clientY - event.clientY) / state.viewportScale;
-      const nextBounds = calculateResizeBounds({
+      const deltaX = (moveEvent.clientX - event.clientX) / zoom;
+      const deltaY = (moveEvent.clientY - event.clientY) / zoom;
+      const next = calculateResizeBounds({
         handle,
         origin,
         deltaX,
         deltaY,
         gridSize: state.gridSize,
-        keepAspect: !moveEvent.shiftKey,
+        keepAspect: moveEvent.shiftKey,
       });
 
       updateNode(nodeId, (draft) => {
-        draft.x = nextBounds.x;
-        draft.y = nextBounds.y;
-        draft.width = nextBounds.width;
-        draft.height = nextBounds.height;
+        draft.x = next.x;
+        draft.y = next.y;
+        draft.width = next.width;
+        draft.height = next.height;
       });
     });
   };
 
   const handleDropAsset = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const assetId = event.dataTransfer.getData(PROJECT_ASSET_MIME);
-    const folderAssetPayload = event.dataTransfer.getData(FOLDER_ASSET_MIME);
-    const workspace = workspaceRef.current;
-    if (!workspace) return;
 
-    const placeAssetNode = (asset: SpriteAsset) => {
-      const rect = workspace.getBoundingClientRect();
-      const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
-      const scale = Math.min(1, capHeight / asset.height);
-      const width = Math.round(asset.width * scale);
-      const height = Math.round(asset.height * scale);
-      const pointerSceneX =
-        (event.clientX - rect.left + workspace.scrollLeft) / state.viewportScale -
-        WORKSPACE_PADDING;
-      const pointerSceneY =
-        (event.clientY - rect.top + workspace.scrollTop) / state.viewportScale - WORKSPACE_PADDING;
-      const x = snapToGrid(pointerSceneX - width / 2, state.gridSize);
-      const y = snapToGrid(pointerSceneY - height / 2, state.gridSize);
-      const nodeId = nextId(
+    const folderAssetPayload = event.dataTransfer.getData(FOLDER_ASSET_MIME);
+    const projectAssetId = event.dataTransfer.getData(PROJECT_ASSET_MIME);
+    const worldPoint = screenToWorld(event.clientX, event.clientY);
+
+    const placeAsset = (asset: SpriteAsset) => {
+      const placedWidth = state.dragGhost?.width ?? asset.width;
+      const placedHeight = state.dragGhost?.height ?? asset.height;
+      const nextNodeId = nextId(
         "node",
         selectedScene.nodes.map((node) => node.id),
       );
+      const node = createPlacedNode(
+        asset,
+        nextNodeId,
+        snapToGrid(worldPoint.x - placedWidth / 2, state.gridSize),
+        snapToGrid(worldPoint.y - placedHeight / 2, state.gridSize),
+      );
+      node.width = placedWidth;
+      node.height = placedHeight;
 
       mutate((draft) => {
         const scene = draft.project.scenes.find((entry) => entry.id === selectedScene.id);
         if (!scene) return;
-        scene.nodes.push({
-          id: nodeId,
-          assetId: asset.id,
-          x,
-          y,
-          width,
-          height,
-          rotation: 0,
-          opacity: 1,
-          locked: false,
-          collisions: createDefaultCollision(),
-          style: {
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center",
-          },
-        });
-        draft.selectedNodeIds = [nodeId];
+        scene.nodes.push(node);
+        draft.selectedNodeIds = [nextNodeId];
       });
     };
 
-    if (assetId) {
-      const asset = state.project.assets[assetId];
+    if (projectAssetId) {
+      const asset = state.project.assets[projectAssetId];
       if (asset) {
-        placeAssetNode(asset);
+        placeAsset(asset);
       }
       return;
     }
 
     if (!folderAssetPayload) return;
+
     const source = JSON.parse(folderAssetPayload) as FolderSpriteSource;
     const existing = Object.values(state.project.assets).find(
       (asset) => asset.sourcePath && asset.sourcePath === source.sourcePath,
     );
+
     if (existing) {
-      placeAssetNode(existing);
+      placeAsset(existing);
       return;
     }
 
@@ -332,119 +399,73 @@ export function Workspace(props: WorkspaceProps) {
     mutate((draft) => {
       draft.project.assets[nextAsset.id] = nextAsset;
     });
-    placeAssetNode(nextAsset);
+
+    placeAsset(nextAsset);
   };
 
-  return (
-    <main className="flex min-w-0 flex-col">
-      <div className="flex items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
-        <div className="flex flex-col gap-0.5">
-          <div className="text-[10px] uppercase tracking-[0.22em] text-white/35">Current scene</div>
-          <strong className="text-sm">{selectedScene.name}</strong>
-          <span className="text-[11px] text-white/35">
-            {selectedScene.nodes.length} nodes • {state.selectedNodeIds.length} selected
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <div className="flex items-center gap-0.5 rounded-md border border-white/8 bg-white/6 p-0.5 text-[11px] text-white/70">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              title="Zoom out"
-              onClick={() => adjustViewportScale(-0.1)}
-            >
-              <ZoomOut />
-            </Button>
-            <button
-              className="min-w-[52px] rounded px-2 text-center text-[10px] uppercase tracking-[0.12em] text-white/70 transition hover:bg-white/10 hover:text-white [font-variant-numeric:tabular-nums]"
-              title="Reset zoom"
-              onClick={() =>
-                mutate((draft) => {
-                  draft.viewportScale = DEFAULT_VIEWPORT_SCALE;
-                })
-              }
-            >
-              {Math.round(state.viewportScale * 100)}%
-            </button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              title="Zoom in"
-              onClick={() => adjustViewportScale(0.1)}
-            >
-              <ZoomIn />
-            </Button>
-          </div>
-          <Button
-            variant="destructive"
-            size="icon-sm"
-            title="Delete selection"
-            disabled={!selectors.selectedUnlockedNodeIds.length}
-            onClick={onDeleteSelected}
-          >
-            <Trash2 />
-          </Button>
-        </div>
-      </div>
+  const toolbarPosition = useMemo(() => {
+    if (!selectors.singleSelectedNode) return null;
+    return {
+      left: pan.x + selectors.singleSelectedNode.x * zoom,
+      top: Math.max(10, pan.y + selectors.singleSelectedNode.y * zoom - 36),
+    };
+  }, [pan.x, pan.y, selectors.singleSelectedNode, zoom]);
 
-      <div className="relative flex min-h-0 flex-1">
+  return (
+    <main className="flex min-w-0 flex-1 flex-col bg-[#0b0b0b]">
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-[#0b0b0b]">
         <div
           ref={workspaceRef}
-          className="min-h-0 flex-1 overflow-auto"
-          onScroll={(event) => {
-            mutate((draft) => {
-              draft.workspaceScroll = {
-                left: event.currentTarget.scrollLeft,
-                top: event.currentTarget.scrollTop,
-              };
-            });
-          }}
-          onDragOver={(event) => {
+          className={`relative h-full w-full overflow-hidden ${
+            spaceDownRef.current ? "cursor-grab" : "cursor-default"
+          }`}
+          onWheel={(event) => {
             event.preventDefault();
-            const workspace = workspaceRef.current;
-            if (!workspace) return;
 
-            const folderPayload = event.dataTransfer.types.includes(FOLDER_ASSET_MIME);
-            const assetPayload = event.dataTransfer.types.includes(PROJECT_ASSET_MIME);
-            if (!folderPayload && !assetPayload) return;
+            if (event.shiftKey) {
+              const element = workspaceRef.current;
+              if (!element) return;
+              const rect = element.getBoundingClientRect();
+              const mouseX = event.clientX - rect.left;
+              const mouseY = event.clientY - rect.top;
+              const factor = event.deltaY > 0 ? 0.92 : 1.08;
+              const nextZoom = clampViewportScale(
+                Math.round(
+                  Math.min(MAX_VIEWPORT_SCALE, Math.max(MIN_VIEWPORT_SCALE, zoom * factor)) * 100,
+                ) / 100,
+              );
 
-            const rect = workspace.getBoundingClientRect();
-            const rawX =
-              (event.clientX - rect.left + workspace.scrollLeft) / state.viewportScale -
-              WORKSPACE_PADDING;
-            const rawY =
-              (event.clientY - rect.top + workspace.scrollTop) / state.viewportScale -
-              WORKSPACE_PADDING;
+              if (nextZoom === zoom) return;
 
-            if (state.dragGhost) {
-              mutate((draft) => {
-                if (!draft.dragGhost) return;
-                draft.dragGhost.x = snapToGrid(rawX - draft.dragGhost.width / 2, draft.gridSize);
-                draft.dragGhost.y = snapToGrid(rawY - draft.dragGhost.height / 2, draft.gridSize);
+              const worldX = (mouseX - panRef.current.x) / zoom;
+              const worldY = (mouseY - panRef.current.y) / zoom;
+
+              setPan({
+                x: mouseX - worldX * nextZoom,
+                y: mouseY - worldY * nextZoom,
               });
+
+              mutate((draft) => {
+                draft.viewportScale = nextZoom;
+              });
+              return;
             }
-          }}
-          onDragLeave={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-              dispatch({ type: "setDragGhost", dragGhost: null });
-            }
-          }}
-          onDrop={(event) => {
-            void handleDropAsset(event);
-            dispatch({ type: "setDragGhost", dragGhost: null });
+
+            setPan((current) => ({
+              x: current.x - event.deltaX,
+              y: current.y - event.deltaY,
+            }));
           }}
           onPointerDown={(event) => {
-            if (event.button !== 0) return;
-            const workspace = workspaceRef.current;
-            if (!workspace) return;
+            if (event.button === 1 || (event.button === 0 && spaceDownRef.current)) {
+              event.preventDefault();
+              startPanSession(event.pointerId, event.clientX, event.clientY);
+              return;
+            }
 
-            const rect = workspace.getBoundingClientRect();
-            const originX =
-              (event.clientX - rect.left + workspace.scrollLeft) / state.viewportScale -
-              WORKSPACE_PADDING;
-            const originY =
-              (event.clientY - rect.top + workspace.scrollTop) / state.viewportScale -
-              WORKSPACE_PADDING;
+            if (event.button !== 0) return;
+
+            const origin = screenToWorld(event.clientX, event.clientY);
             const additive = event.metaKey || event.ctrlKey || event.shiftKey;
             const baseSelection = additive ? state.selectedNodeIds : [];
 
@@ -459,46 +480,37 @@ export function Workspace(props: WorkspaceProps) {
               interaction: {
                 type: "marquee",
                 pointerId: event.pointerId,
-                originX,
-                originY,
-                currentX: originX,
-                currentY: originY,
+                originX: origin.x,
+                originY: origin.y,
+                currentX: origin.x,
+                currentY: origin.y,
                 additive,
                 baseSelection,
               },
             });
 
             beginPointerSession(event.pointerId, (moveEvent) => {
-              const ws = workspaceRef.current;
-              if (!ws) return;
-
-              const wsRect = ws.getBoundingClientRect();
-              const currentX =
-                (moveEvent.clientX - wsRect.left + ws.scrollLeft) / state.viewportScale -
-                WORKSPACE_PADDING;
-              const currentY =
-                (moveEvent.clientY - wsRect.top + ws.scrollTop) / state.viewportScale -
-                WORKSPACE_PADDING;
+              const current = screenToWorld(moveEvent.clientX, moveEvent.clientY);
 
               dispatch({
                 type: "setInteraction",
                 interaction: {
                   type: "marquee",
                   pointerId: event.pointerId,
-                  originX,
-                  originY,
-                  currentX,
-                  currentY,
+                  originX: origin.x,
+                  originY: origin.y,
+                  currentX: current.x,
+                  currentY: current.y,
                   additive,
                   baseSelection,
                 },
               });
 
               const hits = hitTestMarquee(selectedScene.nodes, {
-                x: Math.min(originX, currentX),
-                y: Math.min(originY, currentY),
-                width: Math.abs(currentX - originX),
-                height: Math.abs(currentY - originY),
+                x: Math.min(origin.x, current.x),
+                y: Math.min(origin.y, current.y),
+                width: Math.abs(current.x - origin.x),
+                height: Math.abs(current.y - origin.y),
               });
 
               mutate((draft) => {
@@ -508,18 +520,38 @@ export function Workspace(props: WorkspaceProps) {
               });
             });
           }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!state.dragGhost) return;
+            const point = screenToWorld(event.clientX, event.clientY);
+
+            mutate((draft) => {
+              if (!draft.dragGhost) return;
+              draft.dragGhost.x = snapToGrid(point.x - draft.dragGhost.width / 2, draft.gridSize);
+              draft.dragGhost.y = snapToGrid(point.y - draft.dragGhost.height / 2, draft.gridSize);
+            });
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              dispatch({ type: "setDragGhost", dragGhost: null });
+            }
+          }}
+          onDrop={(event) => {
+            void handleDropAsset(event);
+            dispatch({ type: "setDragGhost", dragGhost: null });
+          }}
         >
           <div
-            className="relative min-h-full min-w-full"
+            className="absolute left-0 top-0 origin-top-left"
             style={{
-              width: `${(selectedScene.size.width + WORKSPACE_PADDING * 2) * state.viewportScale}px`,
-              height: `${(selectedScene.size.height + WORKSPACE_PADDING * 2) * state.viewportScale}px`,
+              width: `${selectedScene.size.width}px`,
+              height: `${selectedScene.size.height}px`,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             }}
           >
             <SceneCanvas
               scene={selectedScene}
               assets={state.project.assets}
-              viewportScale={state.viewportScale}
               gridVisible={state.gridVisible}
               gridSize={state.gridSize}
               dragGhost={state.dragGhost}
@@ -527,39 +559,86 @@ export function Workspace(props: WorkspaceProps) {
 
             <SelectionOverlay
               scene={selectedScene}
-              viewportScale={state.viewportScale}
+              assets={state.project.assets}
               selectedNodeIds={state.selectedNodeIds}
               selectedNodeSet={selectors.selectedNodeSet}
               marqueeRect={selectors.marqueeRect}
               onNodePointerDown={handleStartDrag}
-              onRotatePointerDown={handleStartRotate}
               onResizePointerDown={handleStartResize}
             />
+          </div>
 
-            <FloatingNodeToolbar
-              node={selectors.singleSelectedNode}
-              toolbarPosition={selectors.toolbarPosition}
-              selectedUnlockedNodeIds={selectors.selectedUnlockedNodeIds}
-              nodeStyleId={state.nodeStyleId}
-              collisionEditorId={state.collisionEditorId}
-              stylePopoverContentRef={stylePopoverContentRef}
-              onSetNodeStyleOpen={(open, nodeId) =>
+          <FloatingNodeToolbar
+            node={selectors.singleSelectedNode}
+            toolbarPosition={toolbarPosition}
+            onUpdateNode={updateNode}
+            onDuplicateNode={onDuplicateNode}
+            onBringForward={onBringForward}
+            onSendBackward={onSendBackward}
+            onDeleteSelected={onDeleteSelected}
+          />
+
+          {state.selectedNodeIds.length > 1 ? (
+            <div className="absolute bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 border border-white/14 bg-[#1b1b1b] px-3 py-2 shadow-[3px_3px_0_#000]">
+              <span className="font-[var(--font-ui)] text-[11px] font-semibold uppercase tracking-[0.12em] text-white/66">
+                {state.selectedNodeIds.length} selected
+              </span>
+              <button
+                type="button"
+                className="sb-icon-button text-[#e76464]"
+                onClick={onDeleteSelected}
+                title="Delete selected"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : null}
+
+          <div className="absolute bottom-3 right-3 z-40 flex items-center gap-1 border border-white/14 bg-[#1b1b1b] p-1 shadow-[3px_3px_0_#000]">
+            <button
+              type="button"
+              title="Zoom out"
+              className="sb-icon-button"
+              onClick={() =>
                 mutate((draft) => {
-                  draft.nodeStyleId = open ? nodeId : null;
+                  draft.viewportScale = Math.max(
+                    MIN_VIEWPORT_SCALE,
+                    Math.round((draft.viewportScale - 0.1) * 100) / 100,
+                  );
                 })
               }
-              onSetCollisionEditorOpen={(open, nodeId) =>
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Reset zoom"
+              className="min-w-[50px] px-1.5 font-mono text-[10px] text-white/65"
+              onClick={() =>
                 mutate((draft) => {
-                  draft.collisionEditorId = open ? nodeId : null;
+                  draft.viewportScale = DEFAULT_VIEWPORT_SCALE;
                 })
               }
-              onUpdateNode={updateNode}
-              onDeleteSelected={onDeleteSelected}
-            />
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              title="Zoom in"
+              className="sb-icon-button"
+              onClick={() =>
+                mutate((draft) => {
+                  draft.viewportScale = Math.min(
+                    MAX_VIEWPORT_SCALE,
+                    Math.round((draft.viewportScale + 0.1) * 100) / 100,
+                  );
+                })
+              }
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
-
-        <ResizeHint visible={state.interaction?.type === "resize"} shiftHeld={state.shiftHeld} />
       </div>
     </main>
   );

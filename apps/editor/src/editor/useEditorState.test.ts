@@ -59,6 +59,9 @@ describe("editorReducer", () => {
       rotation: 0,
       opacity: 1,
       locked: false,
+      flipH: false,
+      flipV: false,
+      tint: null,
       collisions: { top: false, right: false, bottom: false, left: false },
       style: {},
     });

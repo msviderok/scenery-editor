@@ -52,6 +52,9 @@ export const spriteNodeSchema = z
     rotation: z.number().finite(),
     opacity: z.number().finite().min(0).max(1),
     locked: z.boolean(),
+    flipH: z.boolean().default(false),
+    flipV: z.boolean().default(false),
+    tint: z.string().nullable().default(null),
     collisions: collisionSchema,
     style: backgroundStyleSchema,
   })
@@ -113,11 +116,11 @@ export function createDefaultScene(id = "scene_1", name = "Scene 1"): SpriteScen
     id,
     name,
     size: {
-      width: 1920,
-      height: 1080,
+      width: 1280,
+      height: 720,
     },
     backgroundStyle: {
-      backgroundColor: "#151515",
+      backgroundColor: "#111220",
     },
     nodes: [],
   };
@@ -197,6 +200,9 @@ function normalizeSpriteProject(project: SpriteProject): SpriteProject {
         rotation: node.rotation,
         opacity: node.opacity,
         locked: node.locked,
+        flipH: node.flipH ?? false,
+        flipV: node.flipV ?? false,
+        tint: node.tint ?? null,
         collisions: normalizeCollision(node.collisions),
         style: normalizeBackgroundStyle(node.style),
       })),
