@@ -4,11 +4,12 @@ export const MIN_SCENE_SIZE = 64;
 export const AUTOSAVE_DELAY_MS = 120;
 export const PERSISTENCE_VERSION = 1;
 export const DEFAULT_VIEWPORT_SCALE = 0.75;
-export const DEFAULT_GRID_SIZE = 32;
+export const DEFAULT_GRID_SIZE = 4;
+export const GRID_SIZE_BREAKPOINTS = [2, 4, 8, 12, 16, 20, 24, 28, 32] as const;
 export const MIN_VIEWPORT_SCALE = 0.1;
 export const MAX_VIEWPORT_SCALE = 4;
-export const MIN_GRID_SIZE = 4;
-export const MAX_GRID_SIZE = 128;
+export const MIN_GRID_SIZE = 2;
+export const MAX_GRID_SIZE = 32;
 
 export const REACT_PERSISTENCE_ACTIVE_SLOT_KEY = "sprite-editor-react:persistence:active-slot";
 export const REACT_PERSISTENCE_SLOT_KEYS = [

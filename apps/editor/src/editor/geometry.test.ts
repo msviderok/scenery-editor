@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  clampGridSize,
   calculateResizeBounds,
   calculateRotationFromPointer,
   hitTestMarquee,
@@ -10,6 +11,17 @@ describe("geometry", () => {
   it("snaps values to the active grid", () => {
     expect(snapToGrid(33, 16)).toBe(32);
     expect(snapToGrid(40, 16)).toBe(48);
+  });
+
+  it("snaps grid sizes to the supported breakpoints", () => {
+    expect(clampGridSize(1)).toBe(2);
+    expect(clampGridSize(3)).toBe(2);
+    expect(clampGridSize(5)).toBe(4);
+    expect(clampGridSize(10)).toBe(8);
+    expect(clampGridSize(14)).toBe(12);
+    expect(clampGridSize(19)).toBe(20);
+    expect(clampGridSize(27)).toBe(28);
+    expect(clampGridSize(99)).toBe(32);
   });
 
   it("normalizes rotation and supports shift snapping", () => {

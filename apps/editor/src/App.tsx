@@ -4,6 +4,7 @@ import { SceneTabs } from "@/components/editor/SceneTabs";
 import { ScenesPanel } from "@/components/editor/ScenesPanel";
 import { Workspace } from "@/components/editor/Workspace";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import {
@@ -12,7 +13,11 @@ import {
   readImageSize,
   serializeEmbeddedProject,
 } from "@/editor/assets";
-import { DEFAULT_VIEWPORT_SCALE, SPRITES_MANIFEST_ROUTE } from "@/editor/constants";
+import {
+  DEFAULT_VIEWPORT_SCALE,
+  GRID_SIZE_BREAKPOINTS,
+  SPRITES_MANIFEST_ROUTE,
+} from "@/editor/constants";
 import { isAssetDragData, isSceneTabDragData, type EditorDragData } from "@/editor/dnd";
 import { nextId, swapAtIndex } from "@/editor/geometry";
 import { getNextPersistenceSlot } from "@/editor/persistence";
@@ -34,6 +39,8 @@ export default function App() {
   const [activeDrag, setActiveDrag] = useState<EditorDragData | null>(null);
 
   const { state, dispatch, mutate, updateScene, updateNode, selectors } = useEditorState();
+  const gridSizeBreakpoints: readonly number[] = GRID_SIZE_BREAKPOINTS;
+  const gridSizeStepIndex = Math.max(0, gridSizeBreakpoints.indexOf(state.gridSize));
 
   useEditorEffects({
     state,
@@ -344,21 +351,29 @@ export default function App() {
                   Grid
                 </div>
 
-                <input
-                  type="number"
-                  min={4}
-                  max={128}
-                  value={state.gridSize}
-                  onChange={(event) =>
-                    mutate((draft) => {
-                      draft.gridSize = Math.max(
-                        4,
-                        Math.min(128, Number(event.currentTarget.value) || 32),
-                      );
-                    })
-                  }
-                  className="h-7 w-14 border border-white/14 bg-white/[0.03] px-2 text-center font-mono text-[11px] text-[var(--foreground)] outline-none focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
-                />
+                <div className="w-36">
+                  <Slider
+                    min={0}
+                    max={GRID_SIZE_BREAKPOINTS.length - 1}
+                    step={1}
+                    value={gridSizeStepIndex}
+                    onValueChange={(value) => {
+                      const nextIndex = Array.isArray(value) ? (value[0] ?? 1) : value;
+                      mutate((draft) => {
+                        draft.gridSize = gridSizeBreakpoints[nextIndex] ?? 4;
+                      });
+                    }}
+                    className="py-1"
+                  />
+                  <div className="mt-1 flex justify-between px-1 font-mono text-[8px] text-white/24">
+                    {gridSizeBreakpoints.map((breakpoint) => (
+                      <span key={breakpoint}>{breakpoint}</span>
+                    ))}
+                  </div>
+                </div>
+                <span className="w-8 text-right font-mono text-[11px] text-white/62">
+                  {state.gridSize}
+                </span>
               </div>
 
               <AssetsPanel

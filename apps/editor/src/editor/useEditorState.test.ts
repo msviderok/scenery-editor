@@ -77,7 +77,7 @@ describe("editorReducer", () => {
         nodeStyleId: null,
         collisionEditorId: null,
         gridVisible: true,
-        gridSize: 32,
+        gridSize: 4,
         workspaceScroll: { left: 0, top: 0 },
       },
     });
@@ -93,7 +93,7 @@ describe("editorReducer", () => {
         draft.project.scenes[0].nodes[0].opacity = 0.5;
         draft.viewportScale = 1.25;
         draft.gridVisible = false;
-        draft.gridSize = 48;
+        draft.gridSize = 33;
       },
     });
 
@@ -104,7 +104,7 @@ describe("editorReducer", () => {
     expect(state.project.scenes[0].nodes[0].opacity).toBe(0.5);
     expect(state.viewportScale).toBe(1.25);
     expect(state.gridVisible).toBe(false);
-    expect(state.gridSize).toBe(48);
+    expect(state.gridSize).toBe(32);
 
     const importedProject = createEmptyProject();
     state = editorReducer(state, {

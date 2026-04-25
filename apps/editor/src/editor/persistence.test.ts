@@ -82,7 +82,7 @@ describe("persistence", () => {
       nodeStyleId: "node_1",
       collisionEditorId: null,
       gridVisible: false,
-      gridSize: 128,
+      gridSize: 32,
       workspaceScroll: {
         left: 0,
         top: 14,
@@ -106,7 +106,7 @@ describe("persistence", () => {
           nodeStyleId: null,
           collisionEditorId: null,
           gridVisible: true,
-          gridSize: 32,
+          gridSize: 4,
           workspaceScroll: { left: 12, top: 34 },
         },
       }),

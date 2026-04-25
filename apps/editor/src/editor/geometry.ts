@@ -2,6 +2,7 @@ import { normalizeRotation, type SpriteNode } from "../../../../shared/ast";
 import {
   DEFAULT_GRID_SIZE,
   DEFAULT_VIEWPORT_SCALE,
+  GRID_SIZE_BREAKPOINTS,
   MAX_GRID_SIZE,
   MAX_VIEWPORT_SCALE,
   MIN_GRID_SIZE,
@@ -29,7 +30,12 @@ export function clampViewportScale(value: number) {
 }
 
 export function clampGridSize(value: number) {
-  return clamp(value, MIN_GRID_SIZE, MAX_GRID_SIZE);
+  const clampedValue = clamp(value, MIN_GRID_SIZE, MAX_GRID_SIZE);
+  return GRID_SIZE_BREAKPOINTS.reduce((closest, breakpoint) => {
+    return Math.abs(breakpoint - clampedValue) < Math.abs(closest - clampedValue)
+      ? breakpoint
+      : closest;
+  }, GRID_SIZE_BREAKPOINTS[0]);
 }
 
 export function normalizeViewportScale(value: unknown) {
