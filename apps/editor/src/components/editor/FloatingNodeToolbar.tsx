@@ -11,6 +11,7 @@ import {
 import { hasAnyCollision, type SpriteNode } from "../../../../../shared/ast";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function CollisionIcon(props: { className?: string }) {
@@ -60,7 +61,7 @@ function ToolbarButton(props: ToolbarAction) {
     <Tooltip>
       <TooltipTrigger
         render={
-          <button
+          <Button
             type="button"
             aria-pressed={active || undefined}
             className={`grid h-6 w-6 place-items-center border border-white/12 bg-[#232323] text-white/58 transition-colors hover:border-white/22 hover:text-white ${
@@ -71,7 +72,7 @@ function ToolbarButton(props: ToolbarAction) {
             onClick={onClick}
           >
             {icon}
-          </button>
+          </Button>
         }
       />
       <TooltipContent>{label}</TooltipContent>

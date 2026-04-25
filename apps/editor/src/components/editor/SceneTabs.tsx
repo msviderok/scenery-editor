@@ -1,5 +1,6 @@
 import { Layers3, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDragDropMonitor } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
@@ -74,7 +75,7 @@ function SortableSceneTab(props: {
   });
 
   return (
-    <button
+    <Button
       ref={ref}
       type="button"
       className={`group relative flex h-full min-w-0 shrink-0 touch-none items-center gap-2 border-r border-white/10 px-3 text-left transition-[color,opacity,background-color] ${
@@ -126,7 +127,7 @@ function SortableSceneTab(props: {
         <Tooltip>
           <TooltipTrigger
             render={
-              <button
+              <Button
                 type="button"
                 className="grid h-4 w-4 shrink-0 place-items-center text-white/28 transition-colors group-hover:text-white/56 hover:text-white"
                 onClick={(event) => {
@@ -135,13 +136,13 @@ function SortableSceneTab(props: {
                 }}
               >
                 <X className="h-3 w-3" />
-              </button>
+              </Button>
             }
           />
           <TooltipContent>Close scene</TooltipContent>
         </Tooltip>
       ) : null}
-    </button>
+    </Button>
   );
 }
 
@@ -200,13 +201,13 @@ export function SceneTabs(props: SceneTabsProps) {
         <Tooltip>
           <TooltipTrigger
             render={
-              <button
+              <Button
                 type="button"
                 className="grid h-full w-10 shrink-0 place-items-center text-white/45 transition-colors hover:bg-white/[0.04] hover:text-[var(--accent)]"
                 onClick={onAdd}
               >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             }
           />
           <TooltipContent>New scene</TooltipContent>

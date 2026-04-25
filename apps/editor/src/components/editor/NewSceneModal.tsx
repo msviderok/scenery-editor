@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { SCENE_PRESETS } from "@/editor/constants";
 import { useEffect, useMemo, useState } from "react";
 
@@ -18,6 +19,12 @@ function formatPreset(size: SceneSize) {
 
 export function NewSceneModal(props: NewSceneModalProps) {
   const { open, onClose, onCreate } = props;
+  const labelClass =
+    "font-[var(--font-ui)] text-[9px] font-bold uppercase tracking-[0.14em] text-white/38";
+  const inputClass =
+    "border border-white/14 bg-white/[0.03] text-[var(--foreground)] outline-none focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
+  const activeChoiceClass =
+    "border-[var(--accent)] text-[var(--accent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
 
   const [name, setName] = useState("");
   const [presetIndex, setPresetIndex] = useState(1);
@@ -74,7 +81,7 @@ export function NewSceneModal(props: NewSceneModalProps) {
         </div>
 
         <label className="mb-4 flex flex-col gap-1.5">
-          <span className="sb-label">Name</span>
+          <span className={labelClass}>Name</span>
           <input
             autoFocus
             value={name}
@@ -86,71 +93,73 @@ export function NewSceneModal(props: NewSceneModalProps) {
               }
             }}
             placeholder="Scene name…"
-            className="sb-input h-11 px-3"
+            className={`${inputClass} h-11 px-3`}
           />
         </label>
 
-        <div className="mb-2 sb-label">Size Preset</div>
+        <div className={`mb-2 ${labelClass}`}>Size Preset</div>
         <div className="grid grid-cols-2 gap-2">
           {SCENE_PRESETS.map((preset, index) => {
             const active = !customMode && index === presetIndex;
             return (
-              <button
+              <Button
                 key={`${preset.width}x${preset.height}`}
+                variant="choice"
                 type="button"
-                className={`sb-choice ${active ? "sb-choice-active" : ""}`}
+                className={active ? activeChoiceClass : undefined}
                 onClick={() => {
                   setCustomMode(false);
                   setPresetIndex(index);
                 }}
               >
                 {formatPreset(preset)}
-              </button>
+              </Button>
             );
           })}
 
-          <button
+          <Button
+            variant="choice"
             type="button"
-            className={`sb-choice ${customMode ? "sb-choice-active" : ""}`}
+            className={customMode ? activeChoiceClass : undefined}
             onClick={() => setCustomMode(true)}
           >
             Custom…
-          </button>
+          </Button>
         </div>
 
         {customMode ? (
           <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
             <label className="flex flex-col gap-1.5">
-              <span className="sb-label">Width</span>
+              <span className={labelClass}>Width</span>
               <input
                 type="number"
                 min={64}
                 value={customWidth}
                 onChange={(event) => setCustomWidth(Number(event.currentTarget.value) || 64)}
-                className="sb-input h-10 px-3"
+                className={`${inputClass} h-10 px-3`}
               />
             </label>
             <span className="pb-2 font-mono text-[13px] text-white/45">×</span>
             <label className="flex flex-col gap-1.5">
-              <span className="sb-label">Height</span>
+              <span className={labelClass}>Height</span>
               <input
                 type="number"
                 min={64}
                 value={customHeight}
                 onChange={(event) => setCustomHeight(Number(event.currentTarget.value) || 64)}
-                className="sb-input h-10 px-3"
+                className={`${inputClass} h-10 px-3`}
               />
             </label>
           </div>
         ) : null}
 
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" className="sb-button sb-button-muted" onClick={onClose}>
+          <Button variant="muted" type="button" onClick={onClose}>
             Cancel
-          </button>
-          <button type="button" className="sb-button sb-button-accent" onClick={submit}>
+          </Button>
+          <Button variant="accent" type="button" onClick={submit}>
             Create
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/react";
 import type { SpriteAsset } from "../../../../../shared/ast";
 import { getAssetUrl, readImageSize } from "@/editor/assets";
+import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -125,7 +126,7 @@ function FolderHeader(props: {
 }) {
   const { label, count, open, depth, onToggle } = props;
   return (
-    <button
+    <Button
       type="button"
       onClick={onToggle}
       className="flex w-full items-center gap-1.5 py-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/38 transition-colors hover:text-white/68"
@@ -134,7 +135,7 @@ function FolderHeader(props: {
       <ChevronRight className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`} />
       <span className="flex-1 truncate text-left">{label}</span>
       <span className="font-mono text-[10px] text-white/28">{count}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -155,7 +156,7 @@ function AssetRow(props: {
   });
 
   const button = (
-    <button
+    <Button
       ref={ref}
       type="button"
       className={`flex w-full touch-none cursor-grab items-center gap-2 py-1.5 text-left text-white/58 transition-[color,opacity,background-color] hover:bg-white/[0.04] hover:text-white/86 active:cursor-grabbing ${
@@ -174,7 +175,7 @@ function AssetRow(props: {
         ) : null}
       </span>
       <span className="pointer-events-none truncate font-mono text-[11px]">{label}</span>
-    </button>
+    </Button>
   );
 
   if (!previewUrl) return button;
@@ -394,14 +395,14 @@ export function AssetsPanel(props: AssetsPanelProps) {
           <Tooltip>
             <TooltipTrigger
               render={
-                <button
+                <Button
+                  variant="iconButton"
                   type="button"
-                  className="sb-icon-button"
                   disabled={allOpen}
                   onClick={() => setAll(true)}
                 >
                   <ChevronsUpDown className="h-3 w-3" />
-                </button>
+                </Button>
               }
             />
             <TooltipContent>Expand all</TooltipContent>
@@ -409,14 +410,14 @@ export function AssetsPanel(props: AssetsPanelProps) {
           <Tooltip>
             <TooltipTrigger
               render={
-                <button
+                <Button
+                  variant="iconButton"
                   type="button"
-                  className="sb-icon-button"
                   disabled={allClosed}
                   onClick={() => setAll(false)}
                 >
                   <ChevronsDownUp className="h-3 w-3" />
-                </button>
+                </Button>
               }
             />
             <TooltipContent>Collapse all</TooltipContent>
@@ -424,9 +425,9 @@ export function AssetsPanel(props: AssetsPanelProps) {
           <Tooltip>
             <TooltipTrigger
               render={
-                <button type="button" className="sb-icon-button" onClick={onRefresh}>
+                <Button variant="iconButton" type="button" onClick={onRefresh}>
                   <RefreshCw className="h-3 w-3" />
-                </button>
+                </Button>
               }
             />
             <TooltipContent>Refresh sprite folder</TooltipContent>
@@ -434,13 +435,13 @@ export function AssetsPanel(props: AssetsPanelProps) {
           <Tooltip>
             <TooltipTrigger
               render={
-                <button
+                <Button
+                  variant="iconButton"
                   type="button"
-                  className="sb-icon-button"
                   onClick={() => uploadInputRef.current?.click()}
                 >
                   <Upload className="h-3 w-3" />
-                </button>
+                </Button>
               }
             />
             <TooltipContent>Upload images</TooltipContent>
@@ -466,19 +467,19 @@ export function AssetsPanel(props: AssetsPanelProps) {
           value={search}
           placeholder="Search assets…"
           onChange={(event) => setSearch(event.currentTarget.value)}
-          className="sb-input h-7 w-full pl-6 pr-7 font-mono text-[11px]"
+          className="h-7 w-full border border-white/14 bg-white/[0.03] pl-6 pr-7 font-mono text-[11px] text-[var(--foreground)] outline-none focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
         />
         {search ? (
           <Tooltip>
             <TooltipTrigger
               render={
-                <button
+                <Button
                   type="button"
                   onClick={() => setSearch("")}
                   className="absolute right-5 top-1/2 grid h-4 w-4 -translate-y-1/2 place-items-center text-white/38 transition-colors hover:text-white/78"
                 >
                   <X className="h-3 w-3" />
-                </button>
+                </Button>
               }
             />
             <TooltipContent>Clear search</TooltipContent>
@@ -535,14 +536,14 @@ export function AssetsPanel(props: AssetsPanelProps) {
         ) : null}
       </div>
 
-      <button
+      <Button
         type="button"
         className="m-2 flex shrink-0 items-center justify-center gap-2 border border-dashed border-white/12 px-3 py-3 font-[var(--font-ui)] text-[11px] font-semibold text-white/40 transition-colors hover:border-[var(--accent)]/50 hover:text-white/78"
         onClick={() => uploadInputRef.current?.click()}
       >
         <Upload className="h-3.5 w-3.5" />
         Upload images
-      </button>
+      </Button>
     </>
   );
 }

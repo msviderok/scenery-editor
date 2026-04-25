@@ -3,6 +3,7 @@ import { NewSceneModal } from "@/components/editor/NewSceneModal";
 import { SceneTabs } from "@/components/editor/SceneTabs";
 import { ScenesPanel } from "@/components/editor/ScenesPanel";
 import { Workspace } from "@/components/editor/Workspace";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import {
@@ -277,7 +278,7 @@ export default function App() {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <label className="sb-button sb-button-compact sb-button-muted h-8 cursor-pointer px-3">
+                    <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-[0.35rem] border border-white/14 bg-[#232323] px-3 py-[0.25rem] font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.12em] text-white/80 shadow-[2px_2px_0_#000] transition-colors duration-[120ms] hover:border-[var(--accent)]">
                       <span>Import</span>
                       <input
                         hidden
@@ -297,13 +298,15 @@ export default function App() {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <button
+                    <Button
+                      variant="accent"
+                      size="compact"
                       type="button"
-                      className="sb-button sb-button-compact sb-button-accent h-8 px-3"
+                      className="h-8 px-3"
                       onClick={() => void handleExport()}
                     >
                       Export
-                    </button>
+                    </Button>
                   }
                 />
                 <TooltipContent>Export project JSON</TooltipContent>
@@ -317,7 +320,7 @@ export default function App() {
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <button
+                      <Button
                         type="button"
                         onClick={() =>
                           mutate((draft) => {
@@ -331,7 +334,7 @@ export default function App() {
                         }`}
                       >
                         <Grid3x3 size={14} />
-                      </button>
+                      </Button>
                     }
                   />
                   <TooltipContent>{state.gridVisible ? "Hide grid" : "Show grid"}</TooltipContent>
@@ -354,7 +357,7 @@ export default function App() {
                       );
                     })
                   }
-                  className="sb-input h-7 w-14 px-2 text-center font-mono text-[11px]"
+                  className="h-7 w-14 border border-white/14 bg-white/[0.03] px-2 text-center font-mono text-[11px] text-[var(--foreground)] outline-none focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
                 />
               </div>
 

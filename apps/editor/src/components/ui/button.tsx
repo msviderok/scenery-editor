@@ -2,40 +2,29 @@ import { cn } from "@/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-base text-sm font-base ring-offset-white transition-all gap-2 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default:
-          "text-main-foreground bg-main border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-        noShadow: "text-main-foreground bg-main border-2 border-border",
-        neutral:
-          "bg-secondary-background text-foreground border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-        reverse:
-          "text-main-foreground bg-main border-2 border-border hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-shadow",
-        outline:
-          "bg-transparent text-foreground border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-        ghost:
-          "bg-transparent text-foreground border border-transparent hover:bg-secondary-background/70",
-        destructive:
-          "bg-red-500 text-white border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
-        lg: "h-11 px-8",
-        icon: "size-10",
-        "icon-sm": "size-9",
-        "icon-xs": "size-7",
-      },
+const sbButtonBase =
+  "inline-flex items-center justify-center gap-[0.45rem] border border-white/14 px-[0.8rem] py-[0.55rem] font-[var(--font-ui)] text-[11px] font-bold uppercase tracking-[0.14em] shadow-[3px_3px_0_#000] transition-colors duration-[120ms] hover:border-accent";
+
+const buttonVariants = cva("", {
+  variants: {
+    variant: {
+      iconButton:
+        "grid h-7 w-7 place-items-center border border-white/14 bg-white/[0.03] text-white/52 transition-colors duration-[120ms] hover:border-accent hover:text-foreground",
+      muted: `${sbButtonBase} bg-[#232323] text-white/80`,
+      accent: `${sbButtonBase} bg-accent border-[color-mix(in_srgb,var(--accent)_55%,#000)] text-main-foreground`,
+      choice:
+        "flex min-h-12 items-center justify-center border border-white/14 bg-white/[0.03] font-[var(--font-mono-ui)] text-[13px] text-white/52",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      default: "",
+      compact:
+        "gap-[0.35rem] px-[0.7rem] py-[0.25rem] text-[10px] tracking-[0.12em] shadow-[2px_2px_0_#000]",
     },
   },
-);
+  defaultVariants: {
+    size: "default",
+  },
+});
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
@@ -46,8 +35,8 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     className,
-    variant = "default",
-    size = "default",
+    variant,
+    size,
     disabled,
     focusableWhenDisabled = false,
     nativeButton = true,

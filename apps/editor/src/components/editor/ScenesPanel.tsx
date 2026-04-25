@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { SpriteAsset, SpriteNode, SpriteProject } from "../../../../../shared/ast";
 
 type ScenesPanelProps = {
@@ -11,7 +12,7 @@ type ScenesPanelProps = {
 const fieldLabelClass =
   "font-[var(--font-ui)] text-[9px] font-bold uppercase tracking-[0.14em] text-white/38";
 const textInputClass =
-  "sb-input h-7 px-2 font-mono text-[11px] [font-variant-numeric:tabular-nums]";
+  "h-7 border border-white/14 bg-white/[0.03] px-2 font-mono text-[11px] text-[var(--foreground)] outline-none [font-variant-numeric:tabular-nums] focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
 
 function parseNumber(value: string, fallback: number) {
   const parsed = Number(value);
@@ -137,9 +138,10 @@ export function ScenesPanel(props: ScenesPanelProps) {
             }
           />
           <div className="grid grid-cols-2 gap-1">
-            <button
+            <Button
+              variant="iconButton"
               type="button"
-              className="sb-icon-button h-7 w-full text-[10px]"
+              className="h-7 w-full text-[10px]"
               onClick={() =>
                 onUpdateNode(selectedNode.id, (node) => {
                   node.rotation -= 45;
@@ -147,10 +149,11 @@ export function ScenesPanel(props: ScenesPanelProps) {
               }
             >
               -45
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="iconButton"
               type="button"
-              className="sb-icon-button h-7 w-full text-[10px]"
+              className="h-7 w-full text-[10px]"
               onClick={() =>
                 onUpdateNode(selectedNode.id, (node) => {
                   node.rotation += 45;
@@ -158,7 +161,7 @@ export function ScenesPanel(props: ScenesPanelProps) {
               }
             >
               +45
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -176,9 +179,11 @@ export function ScenesPanel(props: ScenesPanelProps) {
               })
             }
           />
-          <button
+          <Button
+            variant="muted"
+            size="compact"
             type="button"
-            className="sb-button sb-button-compact sb-button-muted h-8 px-2.5 text-[10px]"
+            className="h-8 px-2.5 text-[10px]"
             onClick={() =>
               onUpdateNode(selectedNode.id, (node) => {
                 node.tint = null;
@@ -186,7 +191,7 @@ export function ScenesPanel(props: ScenesPanelProps) {
             }
           >
             {selectedNode.tint ? "Clear" : "None"}
-          </button>
+          </Button>
         </div>
       </div>
 

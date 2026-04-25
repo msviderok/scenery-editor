@@ -23,6 +23,7 @@ import { SceneCanvas } from "./SceneCanvas";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type WorkspaceProps = {
@@ -635,13 +636,14 @@ export function Workspace(props: WorkspaceProps) {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <button
+                    <Button
+                      variant="iconButton"
                       type="button"
-                      className="sb-icon-button text-[#e76464]"
+                      className="text-[#e76464]"
                       onClick={onDeleteSelected}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   }
                 />
                 <TooltipContent>Delete selected</TooltipContent>
@@ -653,9 +655,9 @@ export function Workspace(props: WorkspaceProps) {
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <button
+                  <Button
+                    variant="iconButton"
                     type="button"
-                    className="sb-icon-button"
                     onClick={() =>
                       mutate((draft) => {
                         draft.viewportScale = Math.max(
@@ -666,7 +668,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   >
                     <Minus className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 }
               />
               <TooltipContent>Zoom out</TooltipContent>
@@ -674,7 +676,7 @@ export function Workspace(props: WorkspaceProps) {
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <button
+                  <Button
                     type="button"
                     className="min-w-[50px] px-1.5 font-mono text-[10px] text-white/65"
                     onClick={() =>
@@ -684,7 +686,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   >
                     {Math.round(zoom * 100)}%
-                  </button>
+                  </Button>
                 }
               />
               <TooltipContent>Reset zoom</TooltipContent>
@@ -692,9 +694,9 @@ export function Workspace(props: WorkspaceProps) {
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <button
+                  <Button
+                    variant="iconButton"
                     type="button"
-                    className="sb-icon-button"
                     onClick={() =>
                       mutate((draft) => {
                         draft.viewportScale = Math.min(
@@ -705,7 +707,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   >
                     <Plus className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 }
               />
               <TooltipContent>Zoom in</TooltipContent>
