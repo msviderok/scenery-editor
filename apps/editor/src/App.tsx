@@ -365,15 +365,25 @@ export default function App() {
                     }}
                     className="py-1"
                   />
-                  <div className="mt-1 flex justify-between px-1 font-mono text-[8px] text-white/24">
+                  <div className="mt-1 flex h-3 justify-between font-mono text-[8px] text-white/24">
                     {gridSizeBreakpoints.map((breakpoint) => (
-                      <span key={breakpoint}>{breakpoint}</span>
+                      <span
+                        key={breakpoint}
+                        className="flex w-0 shrink-0 justify-center overflow-visible first:justify-start last:justify-end"
+                      >
+                        <span
+                          className={
+                            breakpoint === state.gridSize
+                              ? "font-bold text-[var(--accent)]"
+                              : undefined
+                          }
+                        >
+                          {breakpoint}
+                        </span>
+                      </span>
                     ))}
                   </div>
                 </div>
-                <span className="w-8 text-right font-mono text-[11px] text-white/62">
-                  {state.gridSize}
-                </span>
               </div>
 
               <AssetsPanel
