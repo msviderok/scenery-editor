@@ -1,11 +1,14 @@
 import { readImageSize, createPlacedNode } from "@/editor/assets";
+import { useDragDropMonitor, useDroppable } from "@dnd-kit/react";
+import { DEFAULT_VIEWPORT_SCALE, MAX_VIEWPORT_SCALE, MIN_VIEWPORT_SCALE } from "@/editor/constants";
 import {
-  DEFAULT_VIEWPORT_SCALE,
-  FOLDER_ASSET_MIME,
-  MAX_VIEWPORT_SCALE,
-  MIN_VIEWPORT_SCALE,
-  PROJECT_ASSET_MIME,
-} from "@/editor/constants";
+  DND_TYPE_FOLDER_ASSET,
+  DND_TYPE_PROJECT_ASSET,
+  WORKSPACE_DROP_ZONE_ID,
+  createAssetDragGhost,
+  isAssetDragData,
+  type AssetDragData,
+} from "@/editor/dnd";
 import {
   calculateResizeBounds,
   clampViewportScale,
@@ -13,13 +16,7 @@ import {
   nextId,
   snapToGrid,
 } from "@/editor/geometry";
-import type {
-  EditorDispatch,
-  EditorSelectors,
-  EditorState,
-  FolderSpriteSource,
-  ResizeHandle,
-} from "@/editor/types";
+import type { EditorDispatch, EditorSelectors, EditorState, ResizeHandle } from "@/editor/types";
 import type { SpriteAsset, SpriteNode } from "../../../../../shared/ast";
 import { FloatingNodeToolbar } from "./FloatingNodeToolbar";
 import { SceneCanvas } from "./SceneCanvas";
@@ -66,6 +63,10 @@ export function Workspace(props: WorkspaceProps) {
 
   const selectedScene = selectors.selectedScene;
   const zoom = state.viewportScale;
+  const { ref: workspaceDropRef, isDropTarget } = useDroppable({
+    id: WORKSPACE_DROP_ZONE_ID,
+    accept: [DND_TYPE_FOLDER_ASSET, DND_TYPE_PROJECT_ASSET],
+  });
 
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -161,6 +162,142 @@ export function Workspace(props: WorkspaceProps) {
       y: (clientY - rect.top - panRef.current.y) / zoom,
     };
   };
+
+  const clearDragGhost = () => {
+    dispatch({ type: "setDragGhost", dragGhost: null });
+  };
+
+  const updateAssetGhost = (dragData: AssetDragData, clientX: number, clientY: number) => {
+    const point = screenToWorld(clientX, clientY);
+
+    mutate((draft) => {
+      const nextGhost = createAssetDragGhost(dragData);
+      nextGhost.x = snapToGrid(point.x - nextGhost.width / 2, draft.gridSize);
+      nextGhost.y = snapToGrid(point.y - nextGhost.height / 2, draft.gridSize);
+      draft.dragGhost = nextGhost;
+    });
+  };
+
+  const placeDroppedAsset = async (dragData: AssetDragData, clientX: number, clientY: number) => {
+    const worldPoint = screenToWorld(clientX, clientY);
+
+    const placeAsset = (asset: SpriteAsset) => {
+      const placedWidth = dragData.previewWidth;
+      const placedHeight = dragData.previewHeight;
+      const nextNodeId = nextId(
+        "node",
+        selectedScene.nodes.map((node) => node.id),
+      );
+      const node = createPlacedNode(
+        asset,
+        nextNodeId,
+        snapToGrid(worldPoint.x - placedWidth / 2, state.gridSize),
+        snapToGrid(worldPoint.y - placedHeight / 2, state.gridSize),
+      );
+      node.width = placedWidth;
+      node.height = placedHeight;
+
+      mutate((draft) => {
+        const scene = draft.project.scenes.find((entry) => entry.id === selectedScene.id);
+        if (!scene) return;
+        scene.nodes.push(node);
+        draft.selectedNodeIds = [nextNodeId];
+      });
+    };
+
+    if (dragData.kind === DND_TYPE_PROJECT_ASSET) {
+      const asset = state.project.assets[dragData.assetId];
+      if (asset) {
+        placeAsset(asset);
+      }
+      return;
+    }
+
+    const existing = Object.values(state.project.assets).find(
+      (asset) => asset.sourcePath && asset.sourcePath === dragData.sprite.sourcePath,
+    );
+
+    if (existing) {
+      placeAsset(existing);
+      return;
+    }
+
+    const size =
+      dragData.naturalWidth && dragData.naturalHeight
+        ? { width: dragData.naturalWidth, height: dragData.naturalHeight }
+        : (folderSpriteSizeCacheRef.current.get(dragData.sprite.url) ??
+          (await readImageSize(dragData.sprite.url)));
+
+    folderSpriteSizeCacheRef.current.set(dragData.sprite.url, size);
+
+    const nextAsset: SpriteAsset = {
+      id: nextId("asset", Object.keys(state.project.assets)),
+      kind: "image",
+      fileName: dragData.sprite.fileName,
+      width: size.width,
+      height: size.height,
+      mimeType: dragData.sprite.mimeType,
+      sourcePath: dragData.sprite.sourcePath,
+      url: dragData.sprite.url,
+    };
+
+    mutate((draft) => {
+      draft.project.assets[nextAsset.id] = nextAsset;
+    });
+
+    placeAsset(nextAsset);
+  };
+
+  useDragDropMonitor({
+    onDragMove(event) {
+      const sourceData = event.operation.source?.data;
+      const position = (event.operation.position as { current?: { x: number; y: number } }).current;
+
+      if (!isAssetDragData(sourceData) || !position) {
+        return;
+      }
+
+      if (event.operation.target?.id !== WORKSPACE_DROP_ZONE_ID) {
+        if (state.dragGhost) {
+          clearDragGhost();
+        }
+        return;
+      }
+
+      updateAssetGhost(sourceData, position.x, position.y);
+    },
+    onDragOver(event) {
+      const sourceData = event.operation.source?.data;
+      const position = (event.operation.position as { current?: { x: number; y: number } }).current;
+
+      if (!isAssetDragData(sourceData) || !position) {
+        return;
+      }
+
+      if (event.operation.target?.id === WORKSPACE_DROP_ZONE_ID) {
+        updateAssetGhost(sourceData, position.x, position.y);
+        return;
+      }
+
+      if (state.dragGhost) {
+        clearDragGhost();
+      }
+    },
+    onDragEnd(event) {
+      const sourceData = event.operation.source?.data;
+      const position = (event.operation.position as { current?: { x: number; y: number } }).current;
+
+      if (!isAssetDragData(sourceData)) {
+        return;
+      }
+
+      if (event.operation.target?.id === WORKSPACE_DROP_ZONE_ID && position) {
+        void placeDroppedAsset(sourceData, position.x, position.y);
+      }
+
+      clearDragGhost();
+    },
+  });
 
   const beginPointerSession = (
     pointerId: number,
@@ -330,79 +467,6 @@ export function Workspace(props: WorkspaceProps) {
     });
   };
 
-  const handleDropAsset = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-
-    const folderAssetPayload = event.dataTransfer.getData(FOLDER_ASSET_MIME);
-    const projectAssetId = event.dataTransfer.getData(PROJECT_ASSET_MIME);
-    const worldPoint = screenToWorld(event.clientX, event.clientY);
-
-    const placeAsset = (asset: SpriteAsset) => {
-      const placedWidth = state.dragGhost?.width ?? asset.width;
-      const placedHeight = state.dragGhost?.height ?? asset.height;
-      const nextNodeId = nextId(
-        "node",
-        selectedScene.nodes.map((node) => node.id),
-      );
-      const node = createPlacedNode(
-        asset,
-        nextNodeId,
-        snapToGrid(worldPoint.x - placedWidth / 2, state.gridSize),
-        snapToGrid(worldPoint.y - placedHeight / 2, state.gridSize),
-      );
-      node.width = placedWidth;
-      node.height = placedHeight;
-
-      mutate((draft) => {
-        const scene = draft.project.scenes.find((entry) => entry.id === selectedScene.id);
-        if (!scene) return;
-        scene.nodes.push(node);
-        draft.selectedNodeIds = [nextNodeId];
-      });
-    };
-
-    if (projectAssetId) {
-      const asset = state.project.assets[projectAssetId];
-      if (asset) {
-        placeAsset(asset);
-      }
-      return;
-    }
-
-    if (!folderAssetPayload) return;
-
-    const source = JSON.parse(folderAssetPayload) as FolderSpriteSource;
-    const existing = Object.values(state.project.assets).find(
-      (asset) => asset.sourcePath && asset.sourcePath === source.sourcePath,
-    );
-
-    if (existing) {
-      placeAsset(existing);
-      return;
-    }
-
-    const size =
-      folderSpriteSizeCacheRef.current.get(source.url) ?? (await readImageSize(source.url));
-    folderSpriteSizeCacheRef.current.set(source.url, size);
-
-    const nextAsset: SpriteAsset = {
-      id: nextId("asset", Object.keys(state.project.assets)),
-      kind: "image",
-      fileName: source.fileName,
-      width: size.width,
-      height: size.height,
-      mimeType: source.mimeType,
-      sourcePath: source.sourcePath,
-      url: source.url,
-    };
-
-    mutate((draft) => {
-      draft.project.assets[nextAsset.id] = nextAsset;
-    });
-
-    placeAsset(nextAsset);
-  };
-
   const toolbarPosition = useMemo(() => {
     if (!selectors.singleSelectedNode) return null;
     return {
@@ -415,7 +479,10 @@ export function Workspace(props: WorkspaceProps) {
     <main className="flex min-w-0 flex-1 flex-col bg-[#0b0b0b]">
       <div className="relative min-h-0 flex-1 overflow-hidden bg-[#0b0b0b]">
         <div
-          ref={workspaceRef}
+          ref={(element) => {
+            workspaceRef.current = element;
+            workspaceDropRef(element);
+          }}
           className={`relative h-full w-full overflow-hidden ${
             spaceDownRef.current ? "cursor-grab" : "cursor-default"
           }`}
@@ -520,26 +587,6 @@ export function Workspace(props: WorkspaceProps) {
               });
             });
           }}
-          onDragOver={(event) => {
-            event.preventDefault();
-            if (!state.dragGhost) return;
-            const point = screenToWorld(event.clientX, event.clientY);
-
-            mutate((draft) => {
-              if (!draft.dragGhost) return;
-              draft.dragGhost.x = snapToGrid(point.x - draft.dragGhost.width / 2, draft.gridSize);
-              draft.dragGhost.y = snapToGrid(point.y - draft.dragGhost.height / 2, draft.gridSize);
-            });
-          }}
-          onDragLeave={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-              dispatch({ type: "setDragGhost", dragGhost: null });
-            }
-          }}
-          onDrop={(event) => {
-            void handleDropAsset(event);
-            dispatch({ type: "setDragGhost", dragGhost: null });
-          }}
         >
           <div
             className="absolute left-0 top-0 origin-top-left"
@@ -555,6 +602,7 @@ export function Workspace(props: WorkspaceProps) {
               gridVisible={state.gridVisible}
               gridSize={state.gridSize}
               dragGhost={state.dragGhost}
+              dropTargetActive={isDropTarget}
             />
 
             <SelectionOverlay

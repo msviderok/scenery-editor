@@ -1,16 +1,22 @@
 import { ChevronRight, RefreshCw, Upload } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDraggable } from "@dnd-kit/react";
 import type { SpriteAsset } from "../../../../../shared/ast";
 import { getAssetUrl, readImageSize } from "@/editor/assets";
-import { FOLDER_ASSET_MIME, PROJECT_ASSET_MIME } from "@/editor/constants";
-import type { DragGhost, EditorState, FolderSpriteSource } from "@/editor/types";
+import {
+  DND_TYPE_FOLDER_ASSET,
+  createProjectAssetDragData,
+  getAssetPreviewSize,
+  type AssetDragData,
+  type FolderAssetDragData,
+} from "@/editor/dnd";
+import type { FolderSpriteSource } from "@/editor/types";
 
 type AssetsPanelProps = {
   folderSprites: FolderSpriteSource[];
   projectAssets: SpriteAsset[];
   projectAssetsBySourcePath: Map<string, SpriteAsset>;
   folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
-  mutate: (mutation: (draft: EditorState) => void) => void;
   onRefresh: () => void;
   onUploadFiles: (files: FileList | null) => void;
 };
@@ -61,20 +67,24 @@ function FolderHeader(props: {
   );
 }
 
-function AssetRow(props: {
-  label: string;
-  previewUrl: string;
-  onDragStart: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onDragEnd: () => void;
-}) {
-  const { label, previewUrl, onDragStart, onDragEnd } = props;
+function AssetRow(props: { label: string; previewUrl: string; dragData: AssetDragData }) {
+  const { label, previewUrl, dragData } = props;
+  const { ref, isDragging } = useDraggable({
+    id:
+      dragData.kind === DND_TYPE_FOLDER_ASSET
+        ? `folder-asset:${dragData.sprite.id}`
+        : `project-asset:${dragData.assetId}`,
+    type: dragData.kind,
+    data: dragData,
+  });
+
   return (
     <button
+      ref={ref}
       type="button"
-      draggable
-      className="flex w-full cursor-grab items-center gap-2 px-4 py-1.5 text-left text-white/58 transition-colors hover:bg-white/[0.04] hover:text-white/86 active:cursor-grabbing"
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
+      className={`flex w-full touch-none cursor-grab items-center gap-2 px-4 py-1.5 text-left text-white/58 transition-[color,opacity,background-color] hover:bg-white/[0.04] hover:text-white/86 active:cursor-grabbing ${
+        isDragging ? "opacity-35" : ""
+      }`}
     >
       <span className="grid h-5 w-5 shrink-0 place-items-center overflow-hidden border border-white/12 bg-white/[0.03]">
         {previewUrl ? (
@@ -91,13 +101,70 @@ function AssetRow(props: {
   );
 }
 
+function FolderAssetRow(props: {
+  sprite: FolderSpriteSource;
+  existingAsset: SpriteAsset | undefined;
+  folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
+}) {
+  const { sprite, existingAsset, folderSpriteSizeCacheRef } = props;
+  const [measuredSize, setMeasuredSize] = useState<{ width: number; height: number } | null>(() =>
+    existingAsset
+      ? { width: existingAsset.width, height: existingAsset.height }
+      : (folderSpriteSizeCacheRef.current.get(sprite.url) ?? null),
+  );
+
+  useEffect(() => {
+    if (existingAsset) {
+      setMeasuredSize({ width: existingAsset.width, height: existingAsset.height });
+      return;
+    }
+
+    const cached = folderSpriteSizeCacheRef.current.get(sprite.url);
+    if (cached) {
+      setMeasuredSize(cached);
+      return;
+    }
+
+    let cancelled = false;
+
+    void readImageSize(sprite.url)
+      .then((size) => {
+        folderSpriteSizeCacheRef.current.set(sprite.url, size);
+        if (!cancelled) {
+          setMeasuredSize(size);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [existingAsset, folderSpriteSizeCacheRef, sprite.url]);
+
+  const naturalWidth = measuredSize?.width ?? 64;
+  const naturalHeight = measuredSize?.height ?? 64;
+  const preview = getAssetPreviewSize(naturalWidth, naturalHeight);
+
+  const dragData: FolderAssetDragData = {
+    kind: DND_TYPE_FOLDER_ASSET,
+    sprite,
+    previewUrl: sprite.url,
+    imageUrl: sprite.url,
+    previewWidth: preview.width,
+    previewHeight: preview.height,
+    naturalWidth: measuredSize?.width,
+    naturalHeight: measuredSize?.height,
+  };
+
+  return <AssetRow label={sprite.fileName} previewUrl={sprite.url} dragData={dragData} />;
+}
+
 export function AssetsPanel(props: AssetsPanelProps) {
   const {
     folderSprites,
     projectAssets,
     projectAssetsBySourcePath,
     folderSpriteSizeCacheRef,
-    mutate,
     onRefresh,
     onUploadFiles,
   } = props;
@@ -111,29 +178,6 @@ export function AssetsPanel(props: AssetsPanelProps) {
     textures: true,
     "in-project": true,
   });
-
-  const updateDragGhost = (nextGhost: DragGhost | null) => {
-    mutate((draft) => {
-      draft.dragGhost = nextGhost;
-    });
-  };
-
-  const setAssetGhost = (
-    previewUrl: string,
-    width: number,
-    height: number,
-    imageUrl = previewUrl,
-  ) => {
-    const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
-    const scale = Math.min(1, capHeight / Math.max(height, 1));
-    updateDragGhost({
-      x: 0,
-      y: 0,
-      width: Math.max(16, Math.round(width * scale)),
-      height: Math.max(16, Math.round(height * scale)),
-      imageUrl,
-    });
-  };
 
   return (
     <>
@@ -193,55 +237,11 @@ export function AssetsPanel(props: AssetsPanelProps) {
               {open ? (
                 <div className="flex flex-col">
                   {group.sprites.map((sprite) => (
-                    <AssetRow
+                    <FolderAssetRow
                       key={sprite.id}
-                      label={sprite.fileName}
-                      previewUrl={sprite.url}
-                      onDragStart={(event) => {
-                        event.dataTransfer.setData(FOLDER_ASSET_MIME, JSON.stringify(sprite));
-                        event.dataTransfer.effectAllowed = "copy";
-
-                        const existing = projectAssetsBySourcePath.get(sprite.sourcePath);
-                        const cached = folderSpriteSizeCacheRef.current.get(sprite.url);
-
-                        if (existing) {
-                          setAssetGhost(sprite.url, existing.width, existing.height);
-                          return;
-                        }
-
-                        if (cached) {
-                          setAssetGhost(sprite.url, cached.width, cached.height);
-                          return;
-                        }
-
-                        updateDragGhost({
-                          x: 0,
-                          y: 0,
-                          width: 64,
-                          height: 64,
-                          imageUrl: sprite.url,
-                        });
-
-                        void readImageSize(sprite.url)
-                          .then((size) => {
-                            folderSpriteSizeCacheRef.current.set(sprite.url, size);
-                            mutate((draft) => {
-                              if (!draft.dragGhost || draft.dragGhost.imageUrl !== sprite.url) {
-                                return;
-                              }
-
-                              const capHeight = Math.max(80, Math.floor(window.innerHeight * 0.2));
-                              const scale = Math.min(1, capHeight / Math.max(size.height, 1));
-                              draft.dragGhost.width = Math.max(16, Math.round(size.width * scale));
-                              draft.dragGhost.height = Math.max(
-                                16,
-                                Math.round(size.height * scale),
-                              );
-                            });
-                          })
-                          .catch(() => {});
-                      }}
-                      onDragEnd={() => updateDragGhost(null)}
+                      sprite={sprite}
+                      existingAsset={projectAssetsBySourcePath.get(sprite.sourcePath)}
+                      folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
                     />
                   ))}
                 </div>
@@ -271,12 +271,7 @@ export function AssetsPanel(props: AssetsPanelProps) {
                     key={asset.id}
                     label={asset.fileName}
                     previewUrl={getAssetUrl(asset)}
-                    onDragStart={(event) => {
-                      event.dataTransfer.setData(PROJECT_ASSET_MIME, asset.id);
-                      event.dataTransfer.effectAllowed = "copy";
-                      setAssetGhost(getAssetUrl(asset), asset.width, asset.height);
-                    }}
-                    onDragEnd={() => updateDragGhost(null)}
+                    dragData={createProjectAssetDragData(asset)}
                   />
                 ))}
               </div>

@@ -8,10 +8,11 @@ type SceneCanvasProps = {
   gridVisible: boolean;
   gridSize: number;
   dragGhost: DragGhost | null;
+  dropTargetActive: boolean;
 };
 
 export function SceneCanvas(props: SceneCanvasProps) {
-  const { scene, assets, gridVisible, gridSize, dragGhost } = props;
+  const { scene, assets, gridVisible, gridSize, dragGhost, dropTargetActive } = props;
 
   return (
     <div
@@ -22,8 +23,16 @@ export function SceneCanvas(props: SceneCanvasProps) {
       }}
     >
       <div
-        className="absolute inset-0 overflow-hidden border border-white/20 bg-[#111220] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_28px_48px_rgba(0,0,0,0.38)]"
-        style={createSceneBackground(scene.backgroundStyle)}
+        className="absolute inset-0 overflow-hidden border bg-[#111220] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_28px_48px_rgba(0,0,0,0.38)]"
+        style={{
+          ...createSceneBackground(scene.backgroundStyle),
+          borderColor: dropTargetActive
+            ? "color-mix(in srgb, var(--accent) 80%, transparent)"
+            : "rgba(255,255,255,0.2)",
+          boxShadow: dropTargetActive
+            ? "0 0 0 1px rgba(255,255,255,0.04), 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent), 0 28px 48px rgba(0,0,0,0.38)"
+            : "0 0 0 1px rgba(255,255,255,0.04), 0 28px 48px rgba(0,0,0,0.38)",
+        }}
       >
         {gridVisible ? (
           <div

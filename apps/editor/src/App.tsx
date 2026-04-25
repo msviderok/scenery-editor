@@ -3,6 +3,7 @@ import { NewSceneModal } from "@/components/editor/NewSceneModal";
 import { SceneTabs } from "@/components/editor/SceneTabs";
 import { ScenesPanel } from "@/components/editor/ScenesPanel";
 import { Workspace } from "@/components/editor/Workspace";
+import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import {
   buildEmbeddedExportProject,
   readFileAsDataUrl,
@@ -10,6 +11,7 @@ import {
   serializeEmbeddedProject,
 } from "@/editor/assets";
 import { DEFAULT_VIEWPORT_SCALE, SPRITES_MANIFEST_ROUTE } from "@/editor/constants";
+import { isAssetDragData, isSceneTabDragData, type EditorDragData } from "@/editor/dnd";
 import { nextId, swapAtIndex } from "@/editor/geometry";
 import { getNextPersistenceSlot } from "@/editor/persistence";
 import { useEditorEffects } from "@/editor/useEditorEffects";
@@ -26,6 +28,7 @@ export default function App() {
   const restoredWorkspaceScrollRef = useRef(false);
 
   const [newSceneOpen, setNewSceneOpen] = useState(false);
+  const [activeDrag, setActiveDrag] = useState<EditorDragData | null>(null);
 
   const { state, dispatch, mutate, updateScene, updateNode, selectors } = useEditorState();
 
@@ -224,136 +227,181 @@ export default function App() {
     : null;
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      {state.persistenceError ? (
-        <div className="shrink-0 border-b border-[#e76464]/50 bg-[#281313] px-4 py-2 font-mono text-[10px] font-medium text-[#f0b1b1]">
-          {state.persistenceError}
-        </div>
-      ) : null}
+    <DragDropProvider
+      onDragStart={(event) => {
+        const sourceData = event.operation.source?.data;
+        if (isAssetDragData(sourceData) || isSceneTabDragData(sourceData)) {
+          setActiveDrag(sourceData);
+        }
+      }}
+      onDragEnd={() => {
+        setActiveDrag(null);
+      }}
+    >
+      <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
+        {state.persistenceError ? (
+          <div className="shrink-0 border-b border-[#e76464]/50 bg-[#281313] px-4 py-2 font-mono text-[10px] font-medium text-[#f0b1b1]">
+            {state.persistenceError}
+          </div>
+        ) : null}
 
-      <header className="flex h-[42px] shrink-0 items-stretch border-b border-white/10 bg-[#1a1a1a]">
-        <SceneTabs
-          scenes={state.project.scenes}
-          activeSceneId={state.selectedSceneId}
-          onSelect={(sceneId) =>
-            mutate((draft) => {
-              draft.selectedSceneId = sceneId;
-              draft.selectedNodeIds = [];
-            })
-          }
-          onClose={handleCloseScene}
-          onAdd={() => setNewSceneOpen(true)}
-          onReorder={(from, to) =>
-            mutate((draft) => {
-              draft.project.scenes = swapAtIndex(draft.project.scenes, from, to);
-            })
-          }
-        />
+        <header className="flex h-[42px] shrink-0 items-stretch border-b border-white/10 bg-[#1a1a1a]">
+          <SceneTabs
+            scenes={state.project.scenes}
+            activeSceneId={state.selectedSceneId}
+            onSelect={(sceneId) =>
+              mutate((draft) => {
+                draft.selectedSceneId = sceneId;
+                draft.selectedNodeIds = [];
+              })
+            }
+            onClose={handleCloseScene}
+            onAdd={() => setNewSceneOpen(true)}
+            onReorder={(from, to) =>
+              mutate((draft) => {
+                draft.project.scenes = swapAtIndex(draft.project.scenes, from, to);
+              })
+            }
+          />
 
-        <div className="flex shrink-0 items-center gap-2 px-3">
-          <label className="sb-button sb-button-compact sb-button-muted h-8 cursor-pointer px-3">
-            <span>Import</span>
-            <input
-              hidden
-              type="file"
-              accept=".json,.sprite.json"
-              onChange={(event) => {
-                void handleImportProject(event.currentTarget.files?.[0]);
-                event.currentTarget.value = "";
-              }}
-            />
-          </label>
+          <div className="flex shrink-0 items-center gap-2 px-3">
+            <label className="sb-button sb-button-compact sb-button-muted h-8 cursor-pointer px-3">
+              <span>Import</span>
+              <input
+                hidden
+                type="file"
+                accept=".json,.sprite.json"
+                onChange={(event) => {
+                  void handleImportProject(event.currentTarget.files?.[0]);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
 
-          <button
-            type="button"
-            className="sb-button sb-button-compact sb-button-accent h-8 px-3"
-            onClick={() => void handleExport()}
-          >
-            Export
-          </button>
-        </div>
-      </header>
-
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <aside className="flex min-h-0 w-[176px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#171717]">
-          <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
             <button
               type="button"
-              title={state.gridVisible ? "Hide grid" : "Show grid"}
-              onClick={() =>
-                mutate((draft) => {
-                  draft.gridVisible = !draft.gridVisible;
-                })
-              }
-              className={`grid h-7 w-7 place-items-center border text-[10px] font-bold transition-colors ${
-                state.gridVisible
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-black"
-                  : "border-white/14 bg-white/[0.03] text-white/54 hover:border-[var(--accent)]/55 hover:text-white"
-              }`}
+              className="sb-button sb-button-compact sb-button-accent h-8 px-3"
+              onClick={() => void handleExport()}
             >
-              #
+              Export
             </button>
+          </div>
+        </header>
 
-            <div className="flex-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/38">
-              Grid
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <aside className="flex min-h-0 w-80 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#171717]">
+            <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
+              <button
+                type="button"
+                title={state.gridVisible ? "Hide grid" : "Show grid"}
+                onClick={() =>
+                  mutate((draft) => {
+                    draft.gridVisible = !draft.gridVisible;
+                  })
+                }
+                className={`grid h-7 w-7 place-items-center border text-[10px] font-bold transition-colors ${
+                  state.gridVisible
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-black"
+                    : "border-white/14 bg-white/[0.03] text-white/54 hover:border-[var(--accent)]/55 hover:text-white"
+                }`}
+              >
+                #
+              </button>
+
+              <div className="flex-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/38">
+                Grid
+              </div>
+
+              <input
+                type="number"
+                min={4}
+                max={128}
+                value={state.gridSize}
+                onChange={(event) =>
+                  mutate((draft) => {
+                    draft.gridSize = Math.max(
+                      4,
+                      Math.min(128, Number(event.currentTarget.value) || 32),
+                    );
+                  })
+                }
+                className="sb-input h-7 w-14 px-2 text-center font-mono text-[11px]"
+              />
             </div>
 
-            <input
-              type="number"
-              min={4}
-              max={128}
-              value={state.gridSize}
-              onChange={(event) =>
-                mutate((draft) => {
-                  draft.gridSize = Math.max(
-                    4,
-                    Math.min(128, Number(event.currentTarget.value) || 32),
-                  );
-                })
-              }
-              className="sb-input h-7 w-14 px-2 text-center font-mono text-[11px]"
+            <AssetsPanel
+              folderSprites={state.folderSprites}
+              projectAssets={projectAssets}
+              projectAssetsBySourcePath={projectAssetsBySourcePath}
+              folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
+              onRefresh={() => void refreshFolderSprites()}
+              onUploadFiles={(files) => void handleUploadImages(files)}
             />
-          </div>
 
-          <AssetsPanel
-            folderSprites={state.folderSprites}
-            projectAssets={projectAssets}
-            projectAssetsBySourcePath={projectAssetsBySourcePath}
+            <ScenesPanel
+              selectedScene={selectors.selectedScene}
+              selectedNode={selectors.singleSelectedNode}
+              selectedAsset={selectedAsset}
+              onUpdateScene={updateScene}
+              onUpdateNode={updateNode}
+            />
+          </aside>
+
+          <Workspace
+            state={state}
+            selectors={selectors}
+            workspaceRef={workspaceRef}
             folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
             mutate={mutate}
-            onRefresh={() => void refreshFolderSprites()}
-            onUploadFiles={(files) => void handleUploadImages(files)}
+            dispatch={dispatch}
+            updateNode={updateNode}
+            onDeleteSelected={handleDeleteSelected}
+            onDuplicateNode={handleDuplicateNode}
+            onBringForward={handleBringForward}
+            onSendBackward={handleSendBackward}
           />
+        </div>
 
-          <ScenesPanel
-            selectedScene={selectors.selectedScene}
-            selectedNode={selectors.singleSelectedNode}
-            selectedAsset={selectedAsset}
-            onUpdateScene={updateScene}
-            onUpdateNode={updateNode}
-          />
-        </aside>
-
-        <Workspace
-          state={state}
-          selectors={selectors}
-          workspaceRef={workspaceRef}
-          folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-          mutate={mutate}
-          dispatch={dispatch}
-          updateNode={updateNode}
-          onDeleteSelected={handleDeleteSelected}
-          onDuplicateNode={handleDuplicateNode}
-          onBringForward={handleBringForward}
-          onSendBackward={handleSendBackward}
+        <NewSceneModal
+          open={newSceneOpen}
+          onClose={() => setNewSceneOpen(false)}
+          onCreate={handleCreateScene}
         />
-      </div>
 
-      <NewSceneModal
-        open={newSceneOpen}
-        onClose={() => setNewSceneOpen(false)}
-        onCreate={handleCreateScene}
-      />
-    </div>
+        <DragOverlay dropAnimation={null}>
+          {activeDrag ? (
+            isAssetDragData(activeDrag) ? (
+              <div
+                className="overflow-hidden border border-white/18 bg-[#111] p-2 shadow-[0_10px_40px_rgba(0,0,0,0.45)]"
+                style={{
+                  width: `${activeDrag.previewWidth + 16}px`,
+                }}
+              >
+                <div
+                  className="mx-auto [image-rendering:pixelated]"
+                  style={{
+                    width: `${activeDrag.previewWidth}px`,
+                    height: `${activeDrag.previewHeight}px`,
+                    backgroundImage: `url("${activeDrag.previewUrl}")`,
+                    backgroundSize: "contain",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center",
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex min-w-[180px] items-center gap-2 border border-white/14 bg-[#232323] px-3 py-2 text-white shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+                <span className="truncate font-[var(--font-ui)] text-[13px] font-semibold">
+                  {activeDrag.sceneName}
+                </span>
+                <span className="shrink-0 font-mono text-[10px] text-white/45">
+                  {activeDrag.sceneWidth}×{activeDrag.sceneHeight}
+                </span>
+              </div>
+            )
+          ) : null}
+        </DragOverlay>
+      </div>
+    </DragDropProvider>
   );
 }

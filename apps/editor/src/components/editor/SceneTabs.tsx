@@ -1,6 +1,14 @@
 import { Layers3, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo } from "react";
+import { useDragDropMonitor } from "@dnd-kit/react";
+import { useSortable } from "@dnd-kit/react/sortable";
 import type { SpriteProject } from "../../../../../shared/ast";
+import {
+  DND_TYPE_SCENE_TAB,
+  SCENE_TABS_GROUP_ID,
+  isSceneTabDragData,
+  type SceneTabDragData,
+} from "@/editor/dnd";
 
 type SceneTabsProps = {
   scenes: SpriteProject["scenes"];
@@ -11,24 +19,91 @@ type SceneTabsProps = {
   onReorder: (from: number, to: number) => void;
 };
 
+function SortableSceneTab(props: {
+  scene: SpriteProject["scenes"][number];
+  index: number;
+  active: boolean;
+  canClose: boolean;
+  onSelect: (sceneId: string) => void;
+  onClose: (sceneId: string) => void;
+}) {
+  const { scene, index, active, canClose, onSelect, onClose } = props;
+  const { ref, isDragging, isDropTarget } = useSortable<SceneTabDragData>({
+    id: scene.id,
+    index,
+    type: DND_TYPE_SCENE_TAB,
+    group: SCENE_TABS_GROUP_ID,
+    data: {
+      kind: DND_TYPE_SCENE_TAB,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      sceneWidth: scene.size.width,
+      sceneHeight: scene.size.height,
+    },
+  });
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`group relative flex h-full min-w-0 shrink-0 touch-none items-center gap-2 border-r border-white/10 px-3 text-left transition-[color,opacity,background-color] ${
+        active
+          ? "bg-[#232323] text-white"
+          : "bg-transparent text-white/45 hover:bg-white/[0.04] hover:text-white/78"
+      } ${isDragging ? "opacity-35" : ""} ${isDropTarget && !isDragging ? "bg-white/[0.06]" : ""}`}
+      onClick={() => onSelect(scene.id)}
+    >
+      {active ? <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--accent)]" /> : null}
+
+      <span className="max-w-[160px] truncate font-[var(--font-ui)] text-[13px] font-semibold">
+        {scene.name}
+      </span>
+      <span className="shrink-0 font-mono text-[10px] text-white/38">
+        {scene.size.width}×{scene.size.height}
+      </span>
+
+      {canClose ? (
+        <button
+          type="button"
+          className="grid h-4 w-4 shrink-0 place-items-center text-white/28 transition-colors group-hover:text-white/56 hover:text-white"
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose(scene.id);
+          }}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      ) : null}
+    </button>
+  );
+}
+
 export function SceneTabs(props: SceneTabsProps) {
   const { scenes, activeSceneId, onSelect, onClose, onAdd, onReorder } = props;
+  const sceneIndexes = useMemo(
+    () => new Map(scenes.map((scene, index) => [scene.id, index])),
+    [scenes],
+  );
 
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  useDragDropMonitor({
+    onDragEnd(event) {
+      const sourceData = event.operation.source?.data;
+      const targetData = event.operation.target?.data;
 
-  const handleDragStart = (event: React.DragEvent, index: number) => {
-    setDragIndex(index);
-    event.dataTransfer.effectAllowed = "move";
-    const ghost = document.createElement("div");
-    ghost.style.position = "fixed";
-    ghost.style.top = "-9999px";
-    document.body.appendChild(ghost);
-    event.dataTransfer.setDragImage(ghost, 0, 0);
-    queueMicrotask(() => {
-      document.body.removeChild(ghost);
-    });
-  };
+      if (!isSceneTabDragData(sourceData) || !isSceneTabDragData(targetData)) {
+        return;
+      }
+
+      const from = sceneIndexes.get(sourceData.sceneId);
+      const to = sceneIndexes.get(targetData.sceneId);
+
+      if (from == null || to == null || from === to) {
+        return;
+      }
+
+      onReorder(from, to);
+    },
+  });
 
   return (
     <>
@@ -41,66 +116,16 @@ export function SceneTabs(props: SceneTabsProps) {
 
       <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto border-r border-white/10 [scrollbar-width:none]">
         {scenes.map((scene, index) => {
-          const active = scene.id === activeSceneId;
-          const dragging = dragIndex === index;
-          const dropTarget = dragOverIndex === index && dragIndex !== index;
-
           return (
-            <button
+            <SortableSceneTab
               key={scene.id}
-              draggable
-              type="button"
-              className={`group relative flex h-full min-w-0 shrink-0 items-center gap-2 border-r border-white/10 px-3 text-left transition-colors ${
-                active
-                  ? "bg-[#232323] text-white"
-                  : "bg-transparent text-white/45 hover:bg-white/[0.04] hover:text-white/78"
-              } ${dragging ? "opacity-40" : ""}`}
-              onClick={() => onSelect(scene.id)}
-              onDragStart={(event) => handleDragStart(event, index)}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-                setDragOverIndex(index);
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                if (dragIndex !== null && dragIndex !== index) {
-                  onReorder(dragIndex, index);
-                }
-                setDragIndex(null);
-                setDragOverIndex(null);
-              }}
-              onDragEnd={() => {
-                setDragIndex(null);
-                setDragOverIndex(null);
-              }}
-            >
-              {active ? (
-                <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--accent)]" />
-              ) : null}
-              {dropTarget ? (
-                <span className="absolute inset-y-[7px] left-0 w-px bg-[var(--accent)]" />
-              ) : null}
-
-              <span className="max-w-[160px] truncate font-[var(--font-ui)] text-[13px] font-semibold">
-                {scene.name}
-              </span>
-              <span className="shrink-0 font-mono text-[10px] text-white/38">
-                {scene.size.width}×{scene.size.height}
-              </span>
-
-              {scenes.length > 1 ? (
-                <span
-                  className="grid h-4 w-4 shrink-0 place-items-center text-white/28 transition-colors group-hover:text-white/56 hover:text-white"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onClose(scene.id);
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </span>
-              ) : null}
-            </button>
+              scene={scene}
+              index={index}
+              active={scene.id === activeSceneId}
+              canClose={scenes.length > 1}
+              onSelect={onSelect}
+              onClose={onClose}
+            />
           );
         })}
 
