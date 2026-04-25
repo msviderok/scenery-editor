@@ -83,11 +83,16 @@ export function createNodeBackground(
   style: BackgroundStyle,
 ): CSSProperties {
   const image = style.backgroundImage ?? (asset ? `url("${getAssetUrl(asset)}")` : undefined);
+  const repeat = style.backgroundRepeat ?? "no-repeat";
+  // For repeating backgrounds, default tile size to the asset's natural size
+  // so tiles actually repeat instead of stretching to fill the node.
+  const fallbackSize =
+    repeat !== "no-repeat" && asset ? `${asset.width}px ${asset.height}px` : "100% 100%";
   return {
     backgroundColor: style.backgroundColor ?? "transparent",
     backgroundImage: image,
-    backgroundSize: style.backgroundSize ?? "100% 100%",
-    backgroundRepeat: style.backgroundRepeat ?? "no-repeat",
+    backgroundSize: style.backgroundSize ?? fallbackSize,
+    backgroundRepeat: repeat,
     backgroundPosition: style.backgroundPosition ?? "center",
   };
 }
@@ -118,7 +123,6 @@ export function createPlacedNode(asset: SpriteAsset, nodeId: string, x: number, 
     tint: null,
     collisions: createDefaultCollision(),
     style: {
-      backgroundSize: "contain",
       backgroundRepeat: "no-repeat",
       backgroundPosition: "center",
     },

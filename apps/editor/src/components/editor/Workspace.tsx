@@ -23,6 +23,7 @@ import { SceneCanvas } from "./SceneCanvas";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type WorkspaceProps = {
   state: EditorState;
@@ -631,60 +632,84 @@ export function Workspace(props: WorkspaceProps) {
               <span className="font-[var(--font-ui)] text-[11px] font-semibold uppercase tracking-[0.12em] text-white/66">
                 {state.selectedNodeIds.length} selected
               </span>
-              <button
-                type="button"
-                className="sb-icon-button text-[#e76464]"
-                onClick={onDeleteSelected}
-                title="Delete selected"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="sb-icon-button text-[#e76464]"
+                      onClick={onDeleteSelected}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  }
+                />
+                <TooltipContent>Delete selected</TooltipContent>
+              </Tooltip>
             </div>
           ) : null}
 
           <div className="absolute bottom-3 right-3 z-40 flex items-center gap-1 border border-white/14 bg-[#1b1b1b] p-1 shadow-[3px_3px_0_#000]">
-            <button
-              type="button"
-              title="Zoom out"
-              className="sb-icon-button"
-              onClick={() =>
-                mutate((draft) => {
-                  draft.viewportScale = Math.max(
-                    MIN_VIEWPORT_SCALE,
-                    Math.round((draft.viewportScale - 0.1) * 100) / 100,
-                  );
-                })
-              }
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              title="Reset zoom"
-              className="min-w-[50px] px-1.5 font-mono text-[10px] text-white/65"
-              onClick={() =>
-                mutate((draft) => {
-                  draft.viewportScale = DEFAULT_VIEWPORT_SCALE;
-                })
-              }
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-            <button
-              type="button"
-              title="Zoom in"
-              className="sb-icon-button"
-              onClick={() =>
-                mutate((draft) => {
-                  draft.viewportScale = Math.min(
-                    MAX_VIEWPORT_SCALE,
-                    Math.round((draft.viewportScale + 0.1) * 100) / 100,
-                  );
-                })
-              }
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    className="sb-icon-button"
+                    onClick={() =>
+                      mutate((draft) => {
+                        draft.viewportScale = Math.max(
+                          MIN_VIEWPORT_SCALE,
+                          Math.round((draft.viewportScale - 0.1) * 100) / 100,
+                        );
+                      })
+                    }
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                }
+              />
+              <TooltipContent>Zoom out</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    className="min-w-[50px] px-1.5 font-mono text-[10px] text-white/65"
+                    onClick={() =>
+                      mutate((draft) => {
+                        draft.viewportScale = DEFAULT_VIEWPORT_SCALE;
+                      })
+                    }
+                  >
+                    {Math.round(zoom * 100)}%
+                  </button>
+                }
+              />
+              <TooltipContent>Reset zoom</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    className="sb-icon-button"
+                    onClick={() =>
+                      mutate((draft) => {
+                        draft.viewportScale = Math.min(
+                          MAX_VIEWPORT_SCALE,
+                          Math.round((draft.viewportScale + 0.1) * 100) / 100,
+                        );
+                      })
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                }
+              />
+              <TooltipContent>Zoom in</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>

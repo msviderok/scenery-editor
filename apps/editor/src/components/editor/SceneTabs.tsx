@@ -1,5 +1,6 @@
 import { Layers3, Plus, X } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDragDropMonitor } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { SpriteProject } from "../../../../../shared/ast";
@@ -17,6 +18,7 @@ type SceneTabsProps = {
   onClose: (sceneId: string) => void;
   onAdd: () => void;
   onReorder: (from: number, to: number) => void;
+  onRename: (sceneId: string, name: string) => void;
 };
 
 function SortableSceneTab(props: {
@@ -26,13 +28,42 @@ function SortableSceneTab(props: {
   canClose: boolean;
   onSelect: (sceneId: string) => void;
   onClose: (sceneId: string) => void;
+  onRename: (sceneId: string, name: string) => void;
 }) {
-  const { scene, index, active, canClose, onSelect, onClose } = props;
+  const { scene, index, active, canClose, onSelect, onClose, onRename } = props;
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(scene.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) setDraftName(scene.name);
+  }, [editing, scene.name]);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
+
+  const commit = () => {
+    const trimmed = draftName.trim();
+    if (trimmed && trimmed !== scene.name) {
+      onRename(scene.id, trimmed);
+    }
+    setEditing(false);
+  };
+
+  const cancel = () => {
+    setDraftName(scene.name);
+    setEditing(false);
+  };
   const { ref, isDragging, isDropTarget } = useSortable<SceneTabDragData>({
     id: scene.id,
     index,
     type: DND_TYPE_SCENE_TAB,
     group: SCENE_TABS_GROUP_ID,
+    disabled: editing,
     data: {
       kind: DND_TYPE_SCENE_TAB,
       sceneId: scene.id,
@@ -51,35 +82,71 @@ function SortableSceneTab(props: {
           ? "bg-[#232323] text-white"
           : "bg-transparent text-white/45 hover:bg-white/[0.04] hover:text-white/78"
       } ${isDragging ? "opacity-35" : ""} ${isDropTarget && !isDragging ? "bg-white/[0.06]" : ""}`}
-      onClick={() => onSelect(scene.id)}
+      onClick={() => {
+        if (!editing) onSelect(scene.id);
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        if (active) setEditing(true);
+      }}
     >
       {active ? <span className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--accent)]" /> : null}
 
-      <span className="max-w-[160px] truncate font-[var(--font-ui)] text-[13px] font-semibold">
-        {scene.name}
-      </span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={draftName}
+          className="max-w-[160px] min-w-[40px] bg-transparent font-[var(--font-ui)] text-[13px] font-semibold text-white outline-none"
+          onChange={(event) => setDraftName(event.currentTarget.value)}
+          onBlur={commit}
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commit();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              cancel();
+            }
+          }}
+        />
+      ) : (
+        <span className="max-w-[160px] truncate font-[var(--font-ui)] text-[13px] font-semibold">
+          {scene.name}
+        </span>
+      )}
       <span className="shrink-0 font-mono text-[10px] text-white/38">
         {scene.size.width}×{scene.size.height}
       </span>
 
       {canClose ? (
-        <button
-          type="button"
-          className="grid h-4 w-4 shrink-0 place-items-center text-white/28 transition-colors group-hover:text-white/56 hover:text-white"
-          onClick={(event) => {
-            event.stopPropagation();
-            onClose(scene.id);
-          }}
-        >
-          <X className="h-3 w-3" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className="grid h-4 w-4 shrink-0 place-items-center text-white/28 transition-colors group-hover:text-white/56 hover:text-white"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClose(scene.id);
+                }}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            }
+          />
+          <TooltipContent>Close scene</TooltipContent>
+        </Tooltip>
       ) : null}
     </button>
   );
 }
 
 export function SceneTabs(props: SceneTabsProps) {
-  const { scenes, activeSceneId, onSelect, onClose, onAdd, onReorder } = props;
+  const { scenes, activeSceneId, onSelect, onClose, onAdd, onReorder, onRename } = props;
   const sceneIndexes = useMemo(
     () => new Map(scenes.map((scene, index) => [scene.id, index])),
     [scenes],
@@ -125,18 +192,25 @@ export function SceneTabs(props: SceneTabsProps) {
               canClose={scenes.length > 1}
               onSelect={onSelect}
               onClose={onClose}
+              onRename={onRename}
             />
           );
         })}
 
-        <button
-          type="button"
-          title="New scene"
-          className="grid h-full w-10 shrink-0 place-items-center text-white/45 transition-colors hover:bg-white/[0.04] hover:text-[var(--accent)]"
-          onClick={onAdd}
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className="grid h-full w-10 shrink-0 place-items-center text-white/45 transition-colors hover:bg-white/[0.04] hover:text-[var(--accent)]"
+                onClick={onAdd}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            }
+          />
+          <TooltipContent>New scene</TooltipContent>
+        </Tooltip>
       </div>
     </>
   );

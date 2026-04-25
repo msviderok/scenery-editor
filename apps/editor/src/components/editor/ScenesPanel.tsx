@@ -18,6 +18,14 @@ function parseNumber(value: string, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function parseBackgroundSize(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const match = value.match(/-?\d+(?:\.\d+)?/);
+  if (!match) return fallback;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export function ScenesPanel(props: ScenesPanelProps) {
   const { selectedScene, selectedNode, selectedAsset, onUpdateScene, onUpdateNode } = props;
 
@@ -202,51 +210,28 @@ export function ScenesPanel(props: ScenesPanelProps) {
         </label>
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={fieldLabelClass}>BG Size</span>
-          <select
-            value={selectedNode.style.backgroundSize ?? "contain"}
+          <input
+            type="number"
+            min={1}
+            value={parseBackgroundSize(selectedNode.style.backgroundSize, selectedAsset.width)}
             className={textInputClass}
             onChange={(event) =>
               onUpdateNode(selectedNode.id, (node) => {
-                node.style.backgroundSize = event.currentTarget.value;
+                const next = Math.max(
+                  1,
+                  parseNumber(
+                    event.currentTarget.value,
+                    parseBackgroundSize(node.style.backgroundSize, selectedAsset.width),
+                  ),
+                );
+                node.style.backgroundSize = `${next}px ${next}px`;
               })
             }
-          >
-            <option value="contain">Contain</option>
-            <option value="cover">Cover</option>
-            <option value="auto">Auto</option>
-            <option value="32px">32px</option>
-            <option value="64px">64px</option>
-          </select>
+          />
         </label>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="flex min-w-0 flex-col gap-1.5">
-          <span className={fieldLabelClass}>X / Y</span>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              value={Math.round(selectedNode.x)}
-              className={textInputClass}
-              onChange={(event) =>
-                onUpdateNode(selectedNode.id, (node) => {
-                  node.x = parseNumber(event.currentTarget.value, node.x);
-                })
-              }
-            />
-            <input
-              type="number"
-              value={Math.round(selectedNode.y)}
-              className={textInputClass}
-              onChange={(event) =>
-                onUpdateNode(selectedNode.id, (node) => {
-                  node.y = parseNumber(event.currentTarget.value, node.y);
-                })
-              }
-            />
-          </div>
-        </label>
-
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={fieldLabelClass}>W / H</span>
           <div className="grid grid-cols-2 gap-2">

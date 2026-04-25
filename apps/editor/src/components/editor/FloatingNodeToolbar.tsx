@@ -11,6 +11,7 @@ import {
 import { hasAnyCollision, type SpriteNode } from "../../../../../shared/ast";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function CollisionIcon(props: { className?: string }) {
   return (
@@ -56,19 +57,25 @@ function ToolbarButton(props: ToolbarAction) {
   const { label, onClick, active = false, destructive = false, icon } = props;
 
   return (
-    <button
-      type="button"
-      title={label}
-      aria-pressed={active || undefined}
-      className={`grid h-6 w-6 place-items-center border border-white/12 bg-[#232323] text-white/58 transition-colors hover:border-white/22 hover:text-white ${
-        active
-          ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_20%,#232323)] text-[var(--accent)]"
-          : ""
-      } ${destructive ? "hover:border-[#e76464] hover:text-[#e76464]" : ""}`}
-      onClick={onClick}
-    >
-      {icon}
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-pressed={active || undefined}
+            className={`grid h-6 w-6 place-items-center border border-white/12 bg-[#232323] text-white/58 transition-colors hover:border-white/22 hover:text-white ${
+              active
+                ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_20%,#232323)] text-[var(--accent)]"
+                : ""
+            } ${destructive ? "hover:border-[#e76464] hover:text-[#e76464]" : ""}`}
+            onClick={onClick}
+          >
+            {icon}
+          </button>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
