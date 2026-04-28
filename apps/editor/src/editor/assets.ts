@@ -5,7 +5,7 @@ import {
   type BackgroundStyle,
   type SpriteAsset,
   type SpriteProject,
-} from "../../../../shared/ast";
+} from "@msviderok/sprite-editor-ast";
 
 export function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {

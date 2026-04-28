@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import type { SpriteAsset, SpriteNode, SpriteProject } from "../../../../../shared/ast";
+import type { SpriteAsset, SpriteNode, SpriteProject } from "@msviderok/sprite-editor-ast";
 
 type ScenesPanelProps = {
   selectedScene: SpriteProject["scenes"][number];

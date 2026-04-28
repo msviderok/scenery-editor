@@ -1,5 +1,5 @@
 import type { Draft } from "immer";
-import type { SpriteNode, SpriteProject } from "../../../../shared/ast";
+import type { SpriteNode, SpriteProject } from "@msviderok/sprite-editor-ast";
 
 export type ResizeHandle = "n" | "e" | "s" | "w" | "nw" | "ne" | "sw" | "se";
 

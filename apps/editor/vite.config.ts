@@ -12,6 +12,10 @@ export default defineConfig({
     spriteEditorSpriteLibrary(),
   ],
   resolve: {
+    alias: {
+      "@msviderok/sprite-editor-ast": new URL("../../packages/ast/src/index.ts", import.meta.url)
+        .pathname,
+    },
     tsconfigPaths: true,
   },
   server: {

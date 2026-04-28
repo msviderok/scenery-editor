@@ -1,4 +1,4 @@
-import type { SpriteAsset, SpriteScene } from "../../../../../shared/ast";
+import type { SpriteAsset, SpriteScene } from "@msviderok/sprite-editor-ast";
 import { createNodeBackground, createSceneBackground, getAssetUrl } from "@/editor/assets";
 import type { DragGhost } from "@/editor/types";
 

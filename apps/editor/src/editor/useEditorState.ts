@@ -2,7 +2,7 @@ import { produce } from "immer";
 import { useMemo } from "react";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import { createEmptyProject, type SpriteNode } from "../../../../shared/ast";
+import { createEmptyProject, type SpriteNode } from "@msviderok/sprite-editor-ast";
 import { DEFAULT_GRID_SIZE, DEFAULT_VIEWPORT_SCALE } from "./constants";
 import { calculateToolbarPosition, getMarqueeRect } from "./geometry";
 import { readPersistedEditorState, sanitizePersistedUiState } from "./persistence";

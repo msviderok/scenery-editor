@@ -2,7 +2,7 @@ import {
   createEmptyProject,
   parseSpriteProject,
   serializeSpriteProject,
-} from "../../../../shared/ast";
+} from "@msviderok/sprite-editor-ast";
 import {
   DEFAULT_GRID_SIZE,
   DEFAULT_VIEWPORT_SCALE,

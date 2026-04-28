@@ -17,7 +17,7 @@ import {
   snapToGrid,
 } from "@/editor/geometry";
 import type { EditorDispatch, EditorSelectors, EditorState, ResizeHandle } from "@/editor/types";
-import type { SpriteAsset, SpriteNode } from "../../../../../shared/ast";
+import type { SpriteAsset, SpriteNode } from "@msviderok/sprite-editor-ast";
 import { FloatingNodeToolbar } from "./FloatingNodeToolbar";
 import { SceneCanvas } from "./SceneCanvas";
 import { SelectionOverlay } from "./SelectionOverlay";

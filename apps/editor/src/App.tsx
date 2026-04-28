@@ -24,7 +24,11 @@ import { getNextPersistenceSlot } from "@/editor/persistence";
 import { useEditorEffects } from "@/editor/useEditorEffects";
 import { useEditorState } from "@/editor/useEditorState";
 import { useRef, useState } from "react";
-import { createDefaultScene, parseSpriteProject, type SpriteAsset } from "../../../shared/ast";
+import {
+  createDefaultScene,
+  parseSpriteProject,
+  type SpriteAsset,
+} from "@msviderok/sprite-editor-ast";
 import { Grid3x3 } from "lucide-react";
 
 export default function App() {

@@ -1,4 +1,4 @@
-import { normalizeRotation, type SpriteNode } from "../../../../shared/ast";
+import { normalizeRotation, type SpriteNode } from "@msviderok/sprite-editor-ast";
 import {
   DEFAULT_GRID_SIZE,
   DEFAULT_VIEWPORT_SCALE,

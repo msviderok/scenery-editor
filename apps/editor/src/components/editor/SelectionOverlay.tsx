@@ -1,5 +1,5 @@
 import { Lock } from "lucide-react";
-import type { SpriteAsset, SpriteScene } from "../../../../../shared/ast";
+import type { SpriteAsset, SpriteScene } from "@msviderok/sprite-editor-ast";
 import type { MarqueeRect, ResizeHandle } from "@/editor/types";
 
 type SelectionOverlayProps = {

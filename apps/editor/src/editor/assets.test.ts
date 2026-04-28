@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { createEmptyProject } from "../../../../shared/ast";
+import { createEmptyProject } from "@msviderok/sprite-editor-ast";
 import { buildEmbeddedExportProject } from "./assets";
 
 describe("assets", () => {

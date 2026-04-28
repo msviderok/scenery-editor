@@ -4,7 +4,10 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "declaration": true,
-    "emitDeclarationOnly": false
+    "emitDeclarationOnly": false,
+    "paths": {
+      "@msviderok/sprite-editor-ast": ["../ast/src/index.ts"]
+    }
   },
-  "include": ["src", "../../shared/ast"]
+  "include": ["src"]
 }
