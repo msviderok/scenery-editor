@@ -1,4 +1,4 @@
-import type { SpriteAsset } from "@msviderok/sprite-editor-ast";
+import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
 import { getAssetUrl } from "./assets";
 import type { DragGhost, FolderSpriteSource } from "./types";
 

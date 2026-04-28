@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createDefaultScene, createEmptyProject } from "@msviderok/sprite-editor-ast";
+import { createDefaultScene, createEmptyProject } from "@msviderok/sprite-editor-ast-schema";
 import { editorReducer, createInitialEditorState } from "./useEditorState";
 
 describe("editorReducer", () => {

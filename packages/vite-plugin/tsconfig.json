@@ -6,7 +6,7 @@
     "declaration": true,
     "emitDeclarationOnly": false,
     "paths": {
-      "@msviderok/sprite-editor-ast": ["../ast/src/index.ts"]
+      "@msviderok/sprite-editor-ast-schema": ["../ast/src/index.ts"]
     }
   },
   "include": ["src"]

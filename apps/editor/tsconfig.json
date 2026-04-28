@@ -7,7 +7,7 @@
     "types": ["vite/client"],
     "paths": {
       "@/*": ["./src/*"],
-      "@msviderok/sprite-editor-ast": ["../../packages/ast/src/index.ts"]
+      "@msviderok/sprite-editor-ast-schema": ["../../packages/ast/src/index.ts"]
     }
   }
 }

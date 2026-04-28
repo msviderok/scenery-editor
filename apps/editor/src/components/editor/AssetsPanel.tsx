@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/react";
-import type { SpriteAsset } from "@msviderok/sprite-editor-ast";
+import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
 import { getAssetUrl, readImageSize } from "@/editor/assets";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";

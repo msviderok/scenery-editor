@@ -31,7 +31,7 @@ importers:
       '@dnd-kit/react':
         specifier: ^0.4.0
         version: 0.4.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@msviderok/sprite-editor-ast':
+      '@msviderok/sprite-editor-ast-schema':
         specifier: workspace:*
         version: link:../../packages/ast
       class-variance-authority:
@@ -115,7 +115,7 @@ importers:
         specifier: 4.3.6
         version: 4.3.6
     devDependencies:
-      '@msviderok/sprite-editor-ast':
+      '@msviderok/sprite-editor-ast-schema':
         specifier: workspace:*
         version: link:../ast
       '@types/node':

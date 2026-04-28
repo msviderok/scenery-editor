@@ -1,5 +1,5 @@
 {
-  "name": "@msviderok/sprite-editor-ast",
+  "name": "@msviderok/sprite-editor-ast-schema",
   "version": "0.0.0",
   "private": true,
   "type": "module",

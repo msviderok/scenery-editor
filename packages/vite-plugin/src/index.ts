@@ -4,7 +4,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Plugin } from "vite-plus";
-import { parseSpriteProject, type ResolvedSpriteProject } from "@msviderok/sprite-editor-ast";
+import {
+  parseSpriteProject,
+  type ResolvedSpriteProject,
+} from "@msviderok/sprite-editor-ast-schema";
 
 const VIRTUAL_PROJECT_PREFIX = "\0sprite-editor-project:";
 const SPRITES_ROUTE_PREFIX = "/__sprite-editor__/sprites/";

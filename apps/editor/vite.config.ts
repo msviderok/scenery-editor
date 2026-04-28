@@ -13,8 +13,10 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@msviderok/sprite-editor-ast": new URL("../../packages/ast/src/index.ts", import.meta.url)
-        .pathname,
+      "@msviderok/sprite-editor-ast-schema": new URL(
+        "../../packages/ast/src/index.ts",
+        import.meta.url,
+      ).pathname,
     },
     tsconfigPaths: true,
   },

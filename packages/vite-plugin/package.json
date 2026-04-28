@@ -18,7 +18,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@msviderok/sprite-editor-ast": "workspace:*",
+    "@msviderok/sprite-editor-ast-schema": "workspace:*",
     "@types/node": "25.6.0",
     "tsup": "8.5.1",
     "typescript": "6.0.3",

@@ -28,7 +28,7 @@ import {
   createDefaultScene,
   parseSpriteProject,
   type SpriteAsset,
-} from "@msviderok/sprite-editor-ast";
+} from "@msviderok/sprite-editor-ast-schema";
 import { Grid3x3 } from "lucide-react";
 
 export default function App() {

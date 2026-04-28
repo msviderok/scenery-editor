@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createEmptyProject, serializeSpriteProject } from "@msviderok/sprite-editor-ast";
+import { createEmptyProject, serializeSpriteProject } from "@msviderok/sprite-editor-ast-schema";
 import {
   REACT_PERSISTENCE_ACTIVE_SLOT_KEY,
   REACT_PERSISTENCE_SLOT_KEYS,

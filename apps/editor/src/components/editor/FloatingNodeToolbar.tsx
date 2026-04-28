@@ -8,7 +8,7 @@ import {
   LockOpen,
   Trash2,
 } from "lucide-react";
-import { hasAnyCollision, type SpriteNode } from "@msviderok/sprite-editor-ast";
+import { hasAnyCollision, type SpriteNode } from "@msviderok/sprite-editor-ast-schema";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";

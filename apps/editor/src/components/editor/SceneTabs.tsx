@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDragDropMonitor } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import type { SpriteProject } from "@msviderok/sprite-editor-ast";
+import type { SpriteProject } from "@msviderok/sprite-editor-ast-schema";
 import {
   DND_TYPE_SCENE_TAB,
   SCENE_TABS_GROUP_ID,
