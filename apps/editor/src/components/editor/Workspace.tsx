@@ -5,6 +5,7 @@ import {
   MAX_VIEWPORT_SCALE,
   MIN_VIEWPORT_SCALE,
   SHIFT_SCROLL_ZOOM_SPEED,
+  TRACKPAD_PINCH_ZOOM_SENSITIVITY,
 } from "@/editor/constants";
 import {
   DND_TYPE_FOLDER_ASSET,
@@ -46,6 +47,11 @@ type WorkspaceProps = {
 };
 
 type Point = { x: number; y: number };
+type WebKitGestureEvent = Event & {
+  clientX: number;
+  clientY: number;
+  scale: number;
+};
 
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -79,11 +85,17 @@ export function Workspace(props: WorkspaceProps) {
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   const panRef = useRef(pan);
+  const zoomRef = useRef(zoom);
   const spaceDownRef = useRef(false);
+  const gestureZoomStartRef = useRef<{ pan: Point; zoom: number } | null>(null);
 
   useEffect(() => {
     panRef.current = pan;
   }, [pan]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     const element = workspaceRef.current;
@@ -117,6 +129,78 @@ export function Workspace(props: WorkspaceProps) {
     viewportSize.height,
     viewportSize.width,
   ]);
+
+  const applyZoomAtClientPoint = (
+    nextZoom: number,
+    clientX: number,
+    clientY: number,
+    base?: {
+      pan: Point;
+      zoom: number;
+    },
+  ) => {
+    const element = workspaceRef.current;
+    if (!element) return;
+
+    const referenceZoom = base?.zoom ?? zoomRef.current;
+    if (nextZoom === referenceZoom) return;
+
+    const referencePan = base?.pan ?? panRef.current;
+    const rect = element.getBoundingClientRect();
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+    const worldX = (localX - referencePan.x) / referenceZoom;
+    const worldY = (localY - referencePan.y) / referenceZoom;
+
+    setPan({
+      x: localX - worldX * nextZoom,
+      y: localY - worldY * nextZoom,
+    });
+
+    mutate((draft) => {
+      draft.viewportScale = nextZoom;
+    });
+  };
+
+  useEffect(() => {
+    const element = workspaceRef.current;
+    if (!element) return;
+
+    const onGestureStart = (event: Event) => {
+      const gestureEvent = event as WebKitGestureEvent;
+      gestureZoomStartRef.current = {
+        pan: panRef.current,
+        zoom: zoomRef.current,
+      };
+      event.preventDefault();
+      applyZoomAtClientPoint(zoomRef.current, gestureEvent.clientX, gestureEvent.clientY);
+    };
+
+    const onGestureChange = (event: Event) => {
+      const gestureEvent = event as WebKitGestureEvent;
+      const start = gestureZoomStartRef.current;
+      if (!start) return;
+
+      event.preventDefault();
+      const nextZoom = clampViewportScale(Math.round(start.zoom * gestureEvent.scale * 100) / 100);
+      applyZoomAtClientPoint(nextZoom, gestureEvent.clientX, gestureEvent.clientY, start);
+    };
+
+    const onGestureEnd = (event: Event) => {
+      event.preventDefault();
+      gestureZoomStartRef.current = null;
+    };
+
+    element.addEventListener("gesturestart", onGestureStart, { passive: false });
+    element.addEventListener("gesturechange", onGestureChange, { passive: false });
+    element.addEventListener("gestureend", onGestureEnd, { passive: false });
+
+    return () => {
+      element.removeEventListener("gesturestart", onGestureStart);
+      element.removeEventListener("gesturechange", onGestureChange);
+      element.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [mutate, workspaceRef]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -496,33 +580,25 @@ export function Workspace(props: WorkspaceProps) {
           onWheel={(event) => {
             event.preventDefault();
 
+            if (event.ctrlKey) {
+              const factor = Math.exp(-event.deltaY * TRACKPAD_PINCH_ZOOM_SENSITIVITY);
+              const nextZoom = clampViewportScale(Math.round(zoomRef.current * factor * 100) / 100);
+              applyZoomAtClientPoint(nextZoom, event.clientX, event.clientY);
+              return;
+            }
+
             if (event.shiftKey) {
-              const element = workspaceRef.current;
-              if (!element) return;
-              const rect = element.getBoundingClientRect();
-              const mouseX = event.clientX - rect.left;
-              const mouseY = event.clientY - rect.top;
               const factor =
                 event.deltaY > 0 ? 1 - SHIFT_SCROLL_ZOOM_SPEED : 1 + SHIFT_SCROLL_ZOOM_SPEED;
               const nextZoom = clampViewportScale(
                 Math.round(
-                  Math.min(MAX_VIEWPORT_SCALE, Math.max(MIN_VIEWPORT_SCALE, zoom * factor)) * 100,
+                  Math.min(
+                    MAX_VIEWPORT_SCALE,
+                    Math.max(MIN_VIEWPORT_SCALE, zoomRef.current * factor),
+                  ) * 100,
                 ) / 100,
               );
-
-              if (nextZoom === zoom) return;
-
-              const worldX = (mouseX - panRef.current.x) / zoom;
-              const worldY = (mouseY - panRef.current.y) / zoom;
-
-              setPan({
-                x: mouseX - worldX * nextZoom,
-                y: mouseY - worldY * nextZoom,
-              });
-
-              mutate((draft) => {
-                draft.viewportScale = nextZoom;
-              });
+              applyZoomAtClientPoint(nextZoom, event.clientX, event.clientY);
               return;
             }
 
