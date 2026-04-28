@@ -2,7 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite-plus";
-import { spriteEditorSpriteLibrary } from "../../packages/vite-plugin/src";
+import { spriteEditorSpriteLibrary } from "@msviderok/2d-scene-transform-vite-plugin";
 
 export default defineConfig({
   plugins: [
@@ -14,7 +14,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@msviderok/sprite-editor-ast-schema": new URL(
-        "../../packages/ast/src/index.ts",
+        "../../packages/sprite-editor-ast-schema/src/index.ts",
         import.meta.url,
       ).pathname,
     },

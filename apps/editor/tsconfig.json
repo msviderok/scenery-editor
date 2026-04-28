@@ -6,8 +6,7 @@
     "jsxImportSource": "react",
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@msviderok/sprite-editor-ast-schema": ["../../packages/ast/src/index.ts"]
+      "@/*": ["./src/*"]
     }
   }
 }

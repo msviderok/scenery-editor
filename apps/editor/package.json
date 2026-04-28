@@ -10,6 +10,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@dnd-kit/react": "^0.4.0",
+    "@msviderok/2d-scene-transform-vite-plugin": "workspace:*",
     "@msviderok/sprite-editor-ast-schema": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
