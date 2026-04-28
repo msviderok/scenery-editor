@@ -93,6 +93,7 @@ export type EditorState = PersistedEditorUiState & {
   dragGhost: DragGhost | null;
   shiftHeld: boolean;
   persistenceError: string | null;
+  previewOpen: boolean;
 };
 
 export type EditorMutation = (draft: Draft<EditorState>) => void;
@@ -103,7 +104,8 @@ export type EditorAction =
   | { type: "setFolderSprites"; folderSprites: FolderSpriteSource[] }
   | { type: "setDragGhost"; dragGhost: DragGhost | null }
   | { type: "setShiftHeld"; shiftHeld: boolean }
-  | { type: "setPersistenceError"; persistenceError: string | null };
+  | { type: "setPersistenceError"; persistenceError: string | null }
+  | { type: "setPreviewOpen"; previewOpen: boolean };
 
 export type EditorDispatch = (action: EditorAction) => void;
 

@@ -29,7 +29,8 @@ import {
   parseSpriteProject,
   type SpriteAsset,
 } from "@msviderok/sprite-editor-ast-schema";
-import { Grid3x3 } from "lucide-react";
+import { Grid3x3, Play } from "lucide-react";
+import { PreviewOverlay } from "@/components/preview/PreviewOverlay";
 
 export default function App() {
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -310,6 +311,25 @@ export default function App() {
                 <TooltipTrigger
                   render={
                     <Button
+                      variant="muted"
+                      size="compact"
+                      type="button"
+                      className="h-8 px-3"
+                      disabled={!selectors.selectedScene}
+                      onClick={() => dispatch({ type: "setPreviewOpen", previewOpen: true })}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      Preview
+                    </Button>
+                  }
+                />
+                <TooltipContent>Preview current scene</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
                       variant="accent"
                       size="compact"
                       type="button"
@@ -428,6 +448,8 @@ export default function App() {
             onClose={() => setNewSceneOpen(false)}
             onCreate={handleCreateScene}
           />
+
+          <PreviewOverlay />
 
           <DragOverlay dropAnimation={null}>
             {activeDrag ? (

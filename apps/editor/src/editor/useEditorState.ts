@@ -51,6 +51,7 @@ export function createInitialEditorState(restoredState: PersistedEditorState | n
     dragGhost: null,
     shiftHeld: false,
     persistenceError: null,
+    previewOpen: false,
   };
 }
 
@@ -99,6 +100,9 @@ export const editorReducer = produce((draft: EditorState, action: EditorAction) 
       return;
     case "setPersistenceError":
       draft.persistenceError = action.persistenceError;
+      return;
+    case "setPreviewOpen":
+      draft.previewOpen = action.previewOpen;
       return;
   }
 });
