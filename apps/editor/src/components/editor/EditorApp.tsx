@@ -32,7 +32,7 @@ import {
 import { Grid3x3, Play } from "lucide-react";
 import { PreviewOverlay } from "@/components/preview/PreviewOverlay";
 
-export default function App() {
+export function EditorApp() {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const folderSpriteSizeCacheRef = useRef(new Map<string, { width: number; height: number }>());
   const autosaveTimerRef = useRef<number | null>(null);

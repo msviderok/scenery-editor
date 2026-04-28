@@ -4,7 +4,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "paths": {
       "@/*": ["./src/*"]
     }

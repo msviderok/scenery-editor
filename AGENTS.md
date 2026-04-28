@@ -93,11 +93,11 @@ Keep this section current when architecture, data model, persistence, or editor 
 
 ### Current implementation snapshot
 
-- The original standalone HTML/Babel scene-builder prototype has been replaced. The current product lives in `apps/editor` as a React 19 + TypeScript + Vite+ app.
+- The original standalone HTML/Babel scene-builder prototype has been replaced. The current product lives in `apps/editor` as a React 19 + TypeScript + TanStack Start app running through Vite+.
 - `apps/playground` is a second React 19 + TypeScript + Vite+ app used for importing exported sprite AST JSON and previewing scenes fullscreen without the editor chrome.
 - Shared project schema and serialization live in `packages/sprite-editor-ast-schema/src/index.ts` and are consumed via `@msviderok/sprite-editor-ast-schema`.
 - Editor-only state, geometry, drag-and-drop helpers, asset utilities, and persistence live under `apps/editor/src/editor`.
-- `apps/editor/src/App.tsx` is the composition root. Major UI ownership is:
+- `apps/editor/src/components/editor/EditorApp.tsx` is the editor composition root, mounted from `apps/editor/src/routes/index.tsx`. Major UI ownership is:
   - `SceneTabs.tsx`: scene tabs and scene tab drag/reorder behavior
   - `AssetsPanel.tsx`: folder sprite browser, project asset list, refresh, uploads, drag sources
   - `Workspace.tsx`: pan/zoom workspace, node interactions, drop placement, keyboard shortcuts
@@ -142,7 +142,7 @@ Keep this section current when architecture, data model, persistence, or editor 
 
 ### Assets, import/export, and persistence
 
-- The `sprites/` folder is exposed to the app through the manifest route `/__sprite-editor__/sprites.json`.
+- The `sprites/` folder is exposed to the app through TanStack Start server routes rooted at `/__sprite-editor__/sprites.json` and `/__sprite-editor__/sprites/*`.
 - Dragging a folder sprite into the workspace lazily creates a project asset if one with the same `sourcePath` does not already exist.
 - Uploading images reads them as data URLs and records their natural dimensions before inserting them into `project.assets`.
 - Export uses `buildEmbeddedExportProject()` and `serializeEmbeddedProject()` so every asset is embedded as a data URL in the exported JSON.

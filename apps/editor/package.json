@@ -10,8 +10,9 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@dnd-kit/react": "^0.4.0",
-    "@msviderok/2d-scene-transform-vite-plugin": "workspace:*",
     "@msviderok/sprite-editor-ast-schema": "workspace:*",
+    "@tanstack/react-router": "^1.168.25",
+    "@tanstack/react-start": "^1.167.50",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "immer": "^11.1.4",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@rolldown/plugin-babel": "^0.2.3",
     "@tailwindcss/vite": "^4.2.4",
+    "@types/node": "25.6.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^6.0.1",
