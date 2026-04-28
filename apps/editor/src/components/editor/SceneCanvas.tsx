@@ -34,17 +34,6 @@ export function SceneCanvas(props: SceneCanvasProps) {
             : "0 0 0 1px rgba(255,255,255,0.04), 0 28px 48px rgba(0,0,0,0.38)",
         }}
       >
-        {gridVisible ? (
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(to right, rgba(255,255,255,0.06) 0 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 0 1px, transparent 1px)",
-              backgroundSize: `${gridSize}px ${gridSize}px`,
-            }}
-          />
-        ) : null}
-
         {scene.nodes.map((node) => {
           const asset = assets[node.assetId];
           const assetUrl = getAssetUrl(asset);
@@ -99,6 +88,17 @@ export function SceneCanvas(props: SceneCanvasProps) {
           );
         })}
       </div>
+
+      {gridVisible ? (
+        <div
+          className="absolute inset-0 z-40"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, color-mix(in srgb, var(--accent) 52%, transparent) 0 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--accent) 52%, transparent) 0 1px, transparent 1px)",
+            backgroundSize: `${gridSize}px ${gridSize}px`,
+          }}
+        />
+      ) : null}
 
       {dragGhost ? (
         <div
