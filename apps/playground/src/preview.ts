@@ -50,3 +50,13 @@ export function fitSceneToViewport(
   const heightScale = availableHeight / Math.max(1, scene.size.height);
   return Math.max(0.1, Math.min(widthScale, heightScale));
 }
+
+export function fitSceneToViewportHeight(
+  scene: Pick<SpriteScene, "size">,
+  viewport: { height: number },
+  padding = 0,
+): number {
+  const availableHeight = Math.max(1, viewport.height - padding * 2);
+  const heightScale = availableHeight / Math.max(1, scene.size.height);
+  return Math.max(0.1, heightScale);
+}
