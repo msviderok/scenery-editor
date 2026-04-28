@@ -94,7 +94,8 @@ Keep this section current when architecture, data model, persistence, or editor 
 ### Current implementation snapshot
 
 - The original standalone HTML/Babel scene-builder prototype has been replaced. The current product lives in `apps/editor` as a React 19 + TypeScript + Vite+ app.
-- Shared project schema and serialization live in `packages/ast/src/index.ts` and are consumed via `@msviderok/sprite-editor-ast`.
+- `apps/playground` is a second React 19 + TypeScript + Vite+ app used for importing exported sprite AST JSON and previewing scenes fullscreen without the editor chrome.
+- Shared project schema and serialization live in `packages/sprite-editor-ast-schema/src/index.ts` and are consumed via `@msviderok/sprite-editor-ast-schema`.
 - Editor-only state, geometry, drag-and-drop helpers, asset utilities, and persistence live under `apps/editor/src/editor`.
 - `apps/editor/src/App.tsx` is the composition root. Major UI ownership is:
   - `SceneTabs.tsx`: scene tabs and scene tab drag/reorder behavior
