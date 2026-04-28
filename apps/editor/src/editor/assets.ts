@@ -19,7 +19,7 @@ export function readFileAsDataUrl(file: File) {
   });
 }
 
-export function blobToDataUrl(blob: Blob) {
+function blobToDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     if (typeof FileReader === "undefined") {
       void blob
@@ -50,7 +50,7 @@ export function blobToDataUrl(blob: Blob) {
   });
 }
 
-export async function fetchAsDataUrl(
+async function fetchAsDataUrl(
   url: string,
   mimeType?: string,
   fetchImpl: typeof fetch = fetch,
