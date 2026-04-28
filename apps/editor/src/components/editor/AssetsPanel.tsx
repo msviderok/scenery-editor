@@ -2,6 +2,7 @@ import {
   ChevronRight,
   ChevronsDownUp,
   ChevronsUpDown,
+  Ratio,
   RefreshCw,
   Search,
   Upload,
@@ -11,8 +12,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/react";
 import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
 import { getAssetUrl, readImageSize } from "@/editor/assets";
+import { useEditorState } from "@/editor/useEditorState";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { PopoverContent, PopoverRoot, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DND_TYPE_FOLDER_ASSET,
@@ -144,8 +147,10 @@ function AssetRow(props: {
   previewUrl: string;
   dragData: AssetDragData;
   depth: number;
+  /** When set, the row renders project-asset actions (e.g. dimension source). */
+  projectAsset?: SpriteAsset;
 }) {
-  const { label, previewUrl, dragData, depth } = props;
+  const { label, previewUrl, dragData, depth, projectAsset } = props;
   const { ref, isDragging } = useDraggable({
     id:
       dragData.kind === DND_TYPE_FOLDER_ASSET
@@ -162,7 +167,10 @@ function AssetRow(props: {
       className={`flex w-full touch-none cursor-grab items-center gap-2 py-1.5 text-left text-white/58 transition-[color,opacity,background-color] hover:bg-white/[0.04] hover:text-white/86 active:cursor-grabbing ${
         isDragging ? "opacity-35" : ""
       }`}
-      style={{ paddingLeft: `${16 + depth * 12}px`, paddingRight: "16px" }}
+      style={{
+        paddingLeft: `${16 + depth * 12}px`,
+        paddingRight: projectAsset ? "44px" : "16px",
+      }}
     >
       <span className="pointer-events-none grid h-5 w-5 shrink-0 place-items-center overflow-hidden border border-white/12 bg-white/[0.03]">
         {previewUrl ? (
@@ -178,9 +186,7 @@ function AssetRow(props: {
     </Button>
   );
 
-  if (!previewUrl) return button;
-
-  return (
+  const trigger = previewUrl ? (
     <HoverCard>
       <HoverCardTrigger delay={0} closeDelay={0} render={button} />
       <HoverCardContent side="right" sideOffset={12}>
@@ -195,6 +201,167 @@ function AssetRow(props: {
         </div>
       </HoverCardContent>
     </HoverCard>
+  ) : (
+    button
+  );
+
+  if (!projectAsset) return trigger;
+
+  return (
+    <div className="group relative flex w-full items-center">
+      {trigger}
+      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[open=true]:opacity-100">
+        <div className="pointer-events-auto">
+          <AssetDimensionSourcePopover asset={projectAsset} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssetDimensionSourcePopover({ asset }: { asset: SpriteAsset }) {
+  const { state, updateScene } = useEditorState();
+  const [open, setOpen] = useState(false);
+
+  const scene =
+    state.project.scenes.find((entry) => entry.id === state.selectedSceneId) ??
+    state.project.scenes[0];
+
+  const sceneWidth = scene?.size.width ?? 0;
+  const sceneHeight = scene?.size.height ?? 0;
+  const newSceneWidth =
+    asset.height > 0 ? Math.max(1, Math.round((asset.width * sceneHeight) / asset.height)) : 0;
+  const matchesScene = asset.width === sceneWidth && asset.height === sceneHeight;
+  const assetUrl = getAssetUrl(asset);
+  const canApply = Boolean(scene && assetUrl);
+
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+
+  const apply = () => {
+    if (!canApply) return;
+    updateScene((draft) => {
+      draft.size.width = newSceneWidth;
+      draft.backgroundStyle.backgroundImage = `url("${assetUrl}")`;
+      draft.backgroundStyle.backgroundSize = "100% 100%";
+      draft.backgroundStyle.backgroundRepeat = "no-repeat";
+      draft.backgroundStyle.backgroundPosition = "center";
+    });
+    setOpen(false);
+  };
+
+  const repeat = () => {
+    if (!canApply) return;
+    updateScene((draft) => {
+      draft.backgroundStyle.backgroundImage = `url("${assetUrl}")`;
+      draft.backgroundStyle.backgroundSize = `${asset.width}px ${asset.height}px`;
+      draft.backgroundStyle.backgroundRepeat = "repeat";
+      draft.backgroundStyle.backgroundPosition = "top left";
+    });
+    setOpen(false);
+  };
+
+  return (
+    <PopoverRoot open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="iconButton"
+                  className="h-6 w-6"
+                  onPointerDown={stop}
+                  onMouseDown={stop}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                  }}
+                >
+                  <Ratio className="h-3 w-3" />
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent>Use as scene dimension source</TooltipContent>
+      </Tooltip>
+
+      <PopoverContent
+        side="right"
+        sideOffset={8}
+        align="center"
+        className="w-80 border-white/14 bg-[#1a1a1a] text-foreground"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="font-[var(--font-ui)] text-[11px] font-bold uppercase tracking-[0.14em] text-white/68">
+            Dimension source
+          </div>
+
+          <div className="flex flex-col gap-1.5 font-mono text-[11px] text-white/72">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-white/45">Scene</span>
+              <span>
+                {sceneWidth} × {sceneHeight}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-white/45">Asset</span>
+              <span className="truncate">
+                {asset.width} × {asset.height}
+              </span>
+            </div>
+          </div>
+
+          {matchesScene ? (
+            <div className="border-l-2 border-[var(--accent)]/60 bg-white/[0.03] px-2 py-1.5 font-mono text-[11px] text-white/68">
+              Asset already matches scene size.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1 border-l-2 border-[var(--accent)]/60 bg-white/[0.03] px-2 py-1.5 font-mono text-[11px] text-white/72">
+              <span className="text-white/45">
+                Scaling asset to scene height ({sceneHeight}px) →
+              </span>
+              <span className="font-bold text-[var(--accent)]">
+                new scene size: {newSceneWidth} × {sceneHeight}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="accent"
+              size="compact"
+              className="flex-1"
+              disabled={!canApply}
+              onClick={apply}
+            >
+              Apply
+            </Button>
+            <Button
+              type="button"
+              variant="muted"
+              size="compact"
+              className="flex-1"
+              disabled={!canApply}
+              onClick={repeat}
+            >
+              Repeat
+            </Button>
+            <Button
+              type="button"
+              variant="muted"
+              size="compact"
+              className="flex-1"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </PopoverRoot>
   );
 }
 
@@ -515,6 +682,7 @@ export function AssetsPanel(props: AssetsPanelProps) {
                     previewUrl={getAssetUrl(asset)}
                     dragData={createProjectAssetDragData(asset)}
                     depth={1}
+                    projectAsset={asset}
                   />
                 ))}
               </div>
