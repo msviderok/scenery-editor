@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { SCENE_PRESETS } from "@/editor/constants";
+import { NumberField } from "@/components/ui/number-field";
+import { MIN_SCENE_SIZE, SCENE_PRESETS } from "@/editor/constants";
 import { useEffect, useMemo, useState } from "react";
 
 type SceneSize = {
@@ -19,12 +20,11 @@ function formatPreset(size: SceneSize) {
 
 export function NewSceneModal(props: NewSceneModalProps) {
   const { open, onClose, onCreate } = props;
-  const labelClass =
-    "font-[var(--font-ui)] text-[9px] font-bold uppercase tracking-[0.14em] text-white/38";
+  const labelClass = "font-(--font-ui) text-[9px] uppercase tracking-[0.14em] text-white/38";
   const inputClass =
-    "border border-white/14 bg-white/[0.03] text-[var(--foreground)] outline-none focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
+    "border border-white/14 bg-white/3 text-foreground outline-none focus:border-accent focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
   const activeChoiceClass =
-    "border-[var(--accent)] text-[var(--accent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
+    "border-accent text-accent shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
 
   const [name, setName] = useState("");
   const [presetIndex, setPresetIndex] = useState(1);
@@ -44,8 +44,8 @@ export function NewSceneModal(props: NewSceneModalProps) {
   const activeSize = useMemo(() => {
     if (customMode) {
       return {
-        width: Math.max(64, Number(customWidth) || 1280),
-        height: Math.max(64, Number(customHeight) || 720),
+        width: Math.max(MIN_SCENE_SIZE, Number(customWidth) || 1280),
+        height: Math.max(MIN_SCENE_SIZE, Number(customHeight) || 720),
       };
     }
 
@@ -68,7 +68,7 @@ export function NewSceneModal(props: NewSceneModalProps) {
 
   return (
     <div
-      className="absolute inset-0 z-[80] grid place-items-center bg-black/78 backdrop-blur-[2px]"
+      className="absolute inset-0 z-80 grid place-items-center bg-black/78 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -76,7 +76,7 @@ export function NewSceneModal(props: NewSceneModalProps) {
       }}
     >
       <div className="w-[min(420px,calc(100vw-32px))] border border-white/22 bg-[#1a1a1a] p-6 shadow-[4px_4px_0_#000]">
-        <div className="mb-5 font-[var(--font-ui)] text-[22px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
+        <div className="mb-5 font-(--font-ui) text-[22px] uppercase tracking-[0.14em] text-accent">
           New Scene
         </div>
 
@@ -131,22 +131,22 @@ export function NewSceneModal(props: NewSceneModalProps) {
           <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
             <label className="flex flex-col gap-1.5">
               <span className={labelClass}>Width</span>
-              <input
-                type="number"
-                min={64}
+              <NumberField
+                integer
+                minValue={MIN_SCENE_SIZE}
                 value={customWidth}
-                onChange={(event) => setCustomWidth(Number(event.currentTarget.value) || 64)}
+                onValueChange={setCustomWidth}
                 className={`${inputClass} h-10 px-3`}
               />
             </label>
             <span className="pb-2 font-mono text-[13px] text-white/45">×</span>
             <label className="flex flex-col gap-1.5">
               <span className={labelClass}>Height</span>
-              <input
-                type="number"
-                min={64}
+              <NumberField
+                integer
+                minValue={MIN_SCENE_SIZE}
                 value={customHeight}
-                onChange={(event) => setCustomHeight(Number(event.currentTarget.value) || 64)}
+                onValueChange={setCustomHeight}
                 className={`${inputClass} h-10 px-3`}
               />
             </label>

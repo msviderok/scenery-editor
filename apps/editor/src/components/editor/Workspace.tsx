@@ -1,6 +1,11 @@
 import { readImageSize, createPlacedNode } from "@/editor/assets";
 import { useDragDropMonitor, useDroppable } from "@dnd-kit/react";
-import { DEFAULT_VIEWPORT_SCALE, MAX_VIEWPORT_SCALE, MIN_VIEWPORT_SCALE } from "@/editor/constants";
+import {
+  DEFAULT_VIEWPORT_SCALE,
+  MAX_VIEWPORT_SCALE,
+  MIN_VIEWPORT_SCALE,
+  SHIFT_SCROLL_ZOOM_SPEED,
+} from "@/editor/constants";
 import {
   DND_TYPE_FOLDER_ASSET,
   DND_TYPE_PROJECT_ASSET,
@@ -457,7 +462,7 @@ export function Workspace(props: WorkspaceProps) {
         deltaX,
         deltaY,
         gridSize: state.gridSize,
-        keepAspect: moveEvent.shiftKey,
+        freeForm: moveEvent.shiftKey,
       });
 
       updateNode(nodeId, (draft) => {
@@ -497,7 +502,8 @@ export function Workspace(props: WorkspaceProps) {
               const rect = element.getBoundingClientRect();
               const mouseX = event.clientX - rect.left;
               const mouseY = event.clientY - rect.top;
-              const factor = event.deltaY > 0 ? 0.92 : 1.08;
+              const factor =
+                event.deltaY > 0 ? 1 - SHIFT_SCROLL_ZOOM_SPEED : 1 + SHIFT_SCROLL_ZOOM_SPEED;
               const nextZoom = clampViewportScale(
                 Math.round(
                   Math.min(MAX_VIEWPORT_SCALE, Math.max(MIN_VIEWPORT_SCALE, zoom * factor)) * 100,

@@ -1,4 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { NumberField } from "@/components/ui/number-field";
+import { MIN_NODE_SIZE, MIN_SCENE_SIZE } from "@/editor/constants";
+import { restoreAspectRatio } from "@/editor/geometry";
 import type { SpriteAsset, SpriteNode, SpriteProject } from "@msviderok/sprite-editor-ast-schema";
 
 type ScenesPanelProps = {
@@ -13,11 +16,6 @@ const fieldLabelClass =
   "font-[var(--font-ui)] text-[9px] font-bold uppercase tracking-[0.14em] text-white/38";
 const textInputClass =
   "h-7 border border-white/14 bg-white/[0.03] px-2 font-mono text-[11px] text-[var(--foreground)] outline-none [font-variant-numeric:tabular-nums] focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
-
-function parseNumber(value: string, fallback: number) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
 
 function parseBackgroundSize(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -58,28 +56,28 @@ export function ScenesPanel(props: ScenesPanelProps) {
         <div className="grid grid-cols-2 gap-2">
           <label className="flex flex-col gap-1.5">
             <span className={fieldLabelClass}>Width</span>
-            <input
-              type="number"
-              min={64}
+            <NumberField
+              integer
+              minValue={MIN_SCENE_SIZE}
               value={selectedScene.size.width}
               className={textInputClass}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 onUpdateScene((scene) => {
-                  scene.size.width = Math.max(64, parseNumber(event.currentTarget.value, 1280));
+                  scene.size.width = value;
                 })
               }
             />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className={fieldLabelClass}>Height</span>
-            <input
-              type="number"
-              min={64}
+            <NumberField
+              integer
+              minValue={MIN_SCENE_SIZE}
               value={selectedScene.size.height}
               className={textInputClass}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 onUpdateScene((scene) => {
-                  scene.size.height = Math.max(64, parseNumber(event.currentTarget.value, 720));
+                  scene.size.height = value;
                 })
               }
             />
@@ -127,13 +125,12 @@ export function ScenesPanel(props: ScenesPanelProps) {
       <div className="mb-3 flex flex-col gap-1.5">
         <span className={fieldLabelClass}>Rotation</span>
         <div className="grid grid-cols-[minmax(0,1fr)_52px] items-end gap-2">
-          <input
-            type="number"
+          <NumberField
             value={rotationValue}
             className={textInputClass}
-            onChange={(event) =>
+            onValueChange={(value) =>
               onUpdateNode(selectedNode.id, (node) => {
-                node.rotation = parseNumber(event.currentTarget.value, rotationValue);
+                node.rotation = value;
               })
             }
           />
@@ -215,21 +212,14 @@ export function ScenesPanel(props: ScenesPanelProps) {
         </label>
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={fieldLabelClass}>BG Size</span>
-          <input
-            type="number"
-            min={1}
+          <NumberField
+            integer
+            minValue={1}
             value={parseBackgroundSize(selectedNode.style.backgroundSize, selectedAsset.width)}
             className={textInputClass}
-            onChange={(event) =>
+            onValueChange={(value) =>
               onUpdateNode(selectedNode.id, (node) => {
-                const next = Math.max(
-                  1,
-                  parseNumber(
-                    event.currentTarget.value,
-                    parseBackgroundSize(node.style.backgroundSize, selectedAsset.width),
-                  ),
-                );
-                node.style.backgroundSize = `${next}px ${next}px`;
+                node.style.backgroundSize = `${value}px ${value}px`;
               })
             }
           />
@@ -240,30 +230,52 @@ export function ScenesPanel(props: ScenesPanelProps) {
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className={fieldLabelClass}>W / H</span>
           <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              min={4}
-              value={Math.round(selectedNode.width)}
+            <NumberField
+              integer
+              minValue={MIN_NODE_SIZE}
+              value={selectedNode.width}
               className={textInputClass}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 onUpdateNode(selectedNode.id, (node) => {
-                  node.width = Math.max(4, parseNumber(event.currentTarget.value, node.width));
+                  node.width = value;
                 })
               }
             />
-            <input
-              type="number"
-              min={4}
-              value={Math.round(selectedNode.height)}
+            <NumberField
+              integer
+              minValue={MIN_NODE_SIZE}
+              value={selectedNode.height}
               className={textInputClass}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 onUpdateNode(selectedNode.id, (node) => {
-                  node.height = Math.max(4, parseNumber(event.currentTarget.value, node.height));
+                  node.height = value;
                 })
               }
             />
           </div>
         </label>
+        <div className="flex flex-col gap-1.5">
+          <span className={fieldLabelClass}>Aspect</span>
+          <Button
+            variant="muted"
+            size="compact"
+            type="button"
+            className="h-7 px-2 text-[10px]"
+            onClick={() => {
+              const restoredSize = restoreAspectRatio(
+                { width: selectedNode.width, height: selectedNode.height },
+                { width: selectedAsset.width, height: selectedAsset.height },
+              );
+
+              onUpdateNode(selectedNode.id, (node) => {
+                node.width = restoredSize.width;
+                node.height = restoredSize.height;
+              });
+            }}
+          >
+            Revert Ratio
+          </Button>
+        </div>
       </div>
     </div>
   );

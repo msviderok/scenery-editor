@@ -131,6 +131,7 @@ Keep this section current when architecture, data model, persistence, or editor 
 - The workspace uses world coordinates with a centered scene and a separate pan offset. `Workspace.tsx` handles screen/world conversion.
 - Viewport scale defaults to `0.75` and clamps to `0.1..4`. Grid size defaults to `4` and is clamped to `2..32` using the `GRID_SIZE_BREAKPOINTS` list.
 - Nodes support drag, resize, rotate, and marquee selection through the `Interaction` union in `apps/editor/src/editor/types.ts`.
+- Resize behavior snaps to the active grid and preserves the node's current aspect ratio by default. Holding `Shift` switches resize into free-form mode, and the properties panel exposes a revert action that restores the asset's original aspect ratio.
 - Keyboard behavior:
   - `Space`: temporary pan mode
   - `Escape`: clear selection

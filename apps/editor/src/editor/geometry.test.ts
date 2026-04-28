@@ -4,6 +4,7 @@ import {
   calculateResizeBounds,
   calculateRotationFromPointer,
   hitTestMarquee,
+  restoreAspectRatio,
   snapToGrid,
 } from "./geometry";
 
@@ -30,7 +31,7 @@ describe("geometry", () => {
     expect(calculateRotationFromPointer(10, 0, quarterTurn, true)).toBe(105);
   });
 
-  it("keeps aspect ratio by default and allows free-form resize", () => {
+  it("snaps resize to grid while preserving aspect ratio by default", () => {
     expect(
       calculateResizeBounds({
         handle: "se",
@@ -38,10 +39,12 @@ describe("geometry", () => {
         deltaX: 16,
         deltaY: 4,
         gridSize: 16,
-        keepAspect: true,
+        freeForm: false,
       }),
     ).toEqual({ x: 10, y: 20, width: 80, height: 40 });
+  });
 
+  it("allows free-form resize with shift", () => {
     expect(
       calculateResizeBounds({
         handle: "nw",
@@ -49,9 +52,24 @@ describe("geometry", () => {
         deltaX: 20,
         deltaY: 10,
         gridSize: 16,
-        keepAspect: false,
+        freeForm: true,
       }),
     ).toEqual({ x: 30, y: 30, width: 44, height: 22 });
+  });
+
+  it("restores the closest size for the original aspect ratio", () => {
+    expect(restoreAspectRatio({ width: 100, height: 100 }, { width: 64, height: 32 })).toEqual({
+      width: 100,
+      height: 50,
+    });
+    expect(restoreAspectRatio({ width: 30, height: 100 }, { width: 64, height: 32 })).toEqual({
+      width: 30,
+      height: 15,
+    });
+    expect(restoreAspectRatio({ width: 40, height: 220 }, { width: 32, height: 64 })).toEqual({
+      width: 110,
+      height: 220,
+    });
   });
 
   it("hit-tests marquee selection against node bounds", () => {

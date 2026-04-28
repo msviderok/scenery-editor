@@ -8,6 +8,7 @@ export const DEFAULT_GRID_SIZE = 4;
 export const GRID_SIZE_BREAKPOINTS = [2, 4, 8, 12, 16, 20, 24, 28, 32] as const;
 export const MIN_VIEWPORT_SCALE = 0.1;
 export const MAX_VIEWPORT_SCALE = 4;
+export const SHIFT_SCROLL_ZOOM_SPEED = 0.08;
 export const MIN_GRID_SIZE = 2;
 export const MAX_GRID_SIZE = 32;
 

@@ -109,9 +109,9 @@ export function calculateResizeBounds(params: {
   deltaX: number;
   deltaY: number;
   gridSize: number;
-  keepAspect: boolean;
+  freeForm: boolean;
 }) {
-  const { handle, origin, deltaX, deltaY, gridSize, keepAspect } = params;
+  const { handle, origin, deltaX, deltaY, gridSize, freeForm } = params;
   let rawW = origin.width;
   let rawH = origin.height;
 
@@ -124,17 +124,18 @@ export function calculateResizeBounds(params: {
   let nextHeight: number;
   const aspectRatio = origin.width / origin.height;
 
-  if (keepAspect && aspectRatio > 0) {
+  if (!freeForm && aspectRatio > 0) {
     const scaleFromW = rawW / origin.width;
     const scaleFromH = rawH / origin.height;
     const scaleFactor =
       Math.abs(scaleFromW - 1) >= Math.abs(scaleFromH - 1) ? scaleFromW : scaleFromH;
     let snappedW = Math.max(MIN_NODE_SIZE, snapToGrid(origin.width * scaleFactor, gridSize));
-    const snapScale = snappedW / origin.width;
-    let snappedH = Math.max(MIN_NODE_SIZE, Math.round(origin.height * snapScale));
+    let snappedH = Math.max(MIN_NODE_SIZE, Math.round(snappedW / aspectRatio));
+
     if (snappedH === MIN_NODE_SIZE && snappedW !== MIN_NODE_SIZE) {
       snappedW = Math.max(MIN_NODE_SIZE, Math.round(snappedH * aspectRatio));
     }
+
     nextWidth = snappedW;
     nextHeight = snappedH;
   } else {
@@ -153,4 +154,36 @@ export function calculateResizeBounds(params: {
     width: Math.round(nextWidth),
     height: Math.round(nextHeight),
   };
+}
+
+export function restoreAspectRatio(
+  size: { width: number; height: number },
+  aspect: { width: number; height: number },
+) {
+  const ratio = aspect.width / aspect.height;
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    return {
+      width: Math.max(MIN_NODE_SIZE, Math.round(size.width)),
+      height: Math.max(MIN_NODE_SIZE, Math.round(size.height)),
+    };
+  }
+
+  const preserveWidthHeight = Math.max(MIN_NODE_SIZE, Math.round(size.width / ratio));
+  const preserveWidth = {
+    width: Math.max(MIN_NODE_SIZE, Math.round(size.width)),
+    height: preserveWidthHeight,
+  };
+
+  const preserveHeightWidth = Math.max(MIN_NODE_SIZE, Math.round(size.height * ratio));
+  const preserveHeight = {
+    width: preserveHeightWidth,
+    height: Math.max(MIN_NODE_SIZE, Math.round(size.height)),
+  };
+
+  const preserveWidthDelta =
+    Math.abs(preserveWidth.width - size.width) + Math.abs(preserveWidth.height - size.height);
+  const preserveHeightDelta =
+    Math.abs(preserveHeight.width - size.width) + Math.abs(preserveHeight.height - size.height);
+
+  return preserveWidthDelta <= preserveHeightDelta ? preserveWidth : preserveHeight;
 }
