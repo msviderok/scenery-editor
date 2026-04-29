@@ -6,13 +6,21 @@ import {
   Copy,
   Lock,
   LockOpen,
+  Ratio,
   Trash2,
 } from "lucide-react";
-import { hasAnyCollision, type SpriteNode } from "@msviderok/sprite-editor-ast-schema";
+import {
+  hasAnyCollision,
+  type SpriteAsset,
+  type SpriteNode,
+} from "@msviderok/sprite-editor-ast-schema";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PopoverContent, PopoverRoot, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getAssetUrl } from "@/editor/assets";
+import { AssetDimensionSourcePopoverContent } from "./AssetDimensionSourcePopover";
 
 function CollisionIcon(props: { className?: string }) {
   return (
@@ -38,6 +46,7 @@ function CollisionIcon(props: { className?: string }) {
 
 type FloatingNodeToolbarProps = {
   node: SpriteNode | null;
+  asset: SpriteAsset | null;
   toolbarPosition: { left: number; top: number } | null;
   onUpdateNode: (nodeId: string, updater: (node: SpriteNode) => void) => void;
   onDuplicateNode: (nodeId: string) => void;
@@ -83,6 +92,7 @@ function ToolbarButton(props: ToolbarAction) {
 export function FloatingNodeToolbar(props: FloatingNodeToolbarProps) {
   const {
     node,
+    asset,
     toolbarPosition,
     onUpdateNode,
     onDuplicateNode,
@@ -92,11 +102,16 @@ export function FloatingNodeToolbar(props: FloatingNodeToolbarProps) {
   } = props;
 
   const [showCollisionMenu, setShowCollisionMenu] = useState(false);
+  const [dimensionPopoverOpen, setDimensionPopoverOpen] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setShowCollisionMenu(false);
+    setDimensionPopoverOpen(false);
   }, [node?.id]);
+
+  const assetUrl = asset ? getAssetUrl(asset) : "";
+  const canShowDimensionSource = Boolean(asset && assetUrl);
 
   useEffect(() => {
     if (!showCollisionMenu) return;
@@ -125,6 +140,16 @@ export function FloatingNodeToolbar(props: FloatingNodeToolbarProps) {
         }),
       icon: node.locked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />,
     },
+    ...(canShowDimensionSource
+      ? [
+          {
+            label: "Use as scene dimension source",
+            active: dimensionPopoverOpen,
+            onClick: () => setDimensionPopoverOpen((current) => !current),
+            icon: <Ratio className="h-3.5 w-3.5" />,
+          } satisfies ToolbarAction,
+        ]
+      : []),
     {
       label: "Toggle collision",
       active: collisionEnabled,
@@ -183,6 +208,52 @@ export function FloatingNodeToolbar(props: FloatingNodeToolbarProps) {
       onPointerDown={(event) => event.stopPropagation()}
     >
       {actions.map((action) => {
+        if (action.label === "Use as scene dimension source" && asset && assetUrl) {
+          return (
+            <PopoverRoot
+              key={action.label}
+              open={dimensionPopoverOpen}
+              onOpenChange={setDimensionPopoverOpen}
+            >
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          type="button"
+                          aria-pressed={dimensionPopoverOpen || undefined}
+                          className={`grid h-6 w-6 place-items-center border border-white/12 bg-[#232323] text-white/58 transition-colors hover:border-white/22 hover:text-white ${
+                            dimensionPopoverOpen
+                              ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_20%,#232323)] text-[var(--accent)]"
+                              : ""
+                          }`}
+                        >
+                          <Ratio className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
+                  }
+                />
+                <TooltipContent>{action.label}</TooltipContent>
+              </Tooltip>
+              <PopoverContent
+                side="bottom"
+                sideOffset={8}
+                align="center"
+                className="w-80 border-white/14 bg-[#1a1a1a] text-foreground"
+              >
+                <AssetDimensionSourcePopoverContent
+                  assetUrl={assetUrl}
+                  width={asset.width}
+                  height={asset.height}
+                  onClose={() => setDimensionPopoverOpen(false)}
+                />
+              </PopoverContent>
+            </PopoverRoot>
+          );
+        }
+
         if (action.label !== "Toggle collision") {
           return <ToolbarButton key={action.label} {...action} />;
         }

@@ -52,6 +52,7 @@ export function createInitialEditorState(restoredState: PersistedEditorState | n
     shiftHeld: false,
     persistenceError: null,
     previewOpen: false,
+    backgroundSelected: false,
   };
 }
 
@@ -78,6 +79,10 @@ function sanitizeState(draft: EditorState) {
   draft.gridVisible = sanitized.gridVisible;
   draft.gridSize = sanitized.gridSize;
   draft.workspaceScroll = sanitized.workspaceScroll;
+
+  if (draft.selectedNodeIds.length > 0) {
+    draft.backgroundSelected = false;
+  }
 }
 
 export const editorReducer = produce((draft: EditorState, action: EditorAction) => {

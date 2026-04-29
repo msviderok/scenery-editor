@@ -12,11 +12,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/react";
 import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
 import { getAssetUrl, readImageSize } from "@/editor/assets";
-import { useEditorState } from "@/editor/useEditorState";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { PopoverContent, PopoverRoot, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AssetDimensionSourcePopoverContent } from "./AssetDimensionSourcePopover";
 import {
   DND_TYPE_FOLDER_ASSET,
   createProjectAssetDragData,
@@ -147,10 +147,10 @@ function AssetRow(props: {
   previewUrl: string;
   dragData: AssetDragData;
   depth: number;
-  /** When set, the row renders project-asset actions (e.g. dimension source). */
-  projectAsset?: SpriteAsset;
+  /** When set, the row exposes a dimension-source action. */
+  dimensionSource?: { url: string; width: number; height: number };
 }) {
-  const { label, previewUrl, dragData, depth, projectAsset } = props;
+  const { label, previewUrl, dragData, depth, dimensionSource } = props;
   const { ref, isDragging } = useDraggable({
     id:
       dragData.kind === DND_TYPE_FOLDER_ASSET
@@ -169,7 +169,7 @@ function AssetRow(props: {
       }`}
       style={{
         paddingLeft: `${16 + depth * 12}px`,
-        paddingRight: projectAsset ? "44px" : "16px",
+        paddingRight: dimensionSource ? "44px" : "16px",
       }}
     >
       <span className="pointer-events-none grid h-5 w-5 shrink-0 place-items-center overflow-hidden border border-white/12 bg-white/[0.03]">
@@ -205,60 +205,27 @@ function AssetRow(props: {
     button
   );
 
-  if (!projectAsset) return trigger;
+  if (!dimensionSource) return trigger;
 
   return (
     <div className="group relative flex w-full items-center">
       {trigger}
       <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[open=true]:opacity-100">
         <div className="pointer-events-auto">
-          <AssetDimensionSourcePopover asset={projectAsset} />
+          <AssetDimensionSourceRowButton dimensionSource={dimensionSource} />
         </div>
       </div>
     </div>
   );
 }
 
-function AssetDimensionSourcePopover({ asset }: { asset: SpriteAsset }) {
-  const { state, updateScene } = useEditorState();
+function AssetDimensionSourceRowButton({
+  dimensionSource,
+}: {
+  dimensionSource: { url: string; width: number; height: number };
+}) {
   const [open, setOpen] = useState(false);
-
-  const scene =
-    state.project.scenes.find((entry) => entry.id === state.selectedSceneId) ??
-    state.project.scenes[0];
-
-  const sceneWidth = scene?.size.width ?? 0;
-  const sceneHeight = scene?.size.height ?? 0;
-  const newSceneWidth =
-    asset.height > 0 ? Math.max(1, Math.round((asset.width * sceneHeight) / asset.height)) : 0;
-  const matchesScene = asset.width === sceneWidth && asset.height === sceneHeight;
-  const assetUrl = getAssetUrl(asset);
-  const canApply = Boolean(scene && assetUrl);
-
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
-
-  const apply = () => {
-    if (!canApply) return;
-    updateScene((draft) => {
-      draft.size.width = newSceneWidth;
-      draft.backgroundStyle.backgroundImage = `url("${assetUrl}")`;
-      draft.backgroundStyle.backgroundSize = "100% 100%";
-      draft.backgroundStyle.backgroundRepeat = "no-repeat";
-      draft.backgroundStyle.backgroundPosition = "center";
-    });
-    setOpen(false);
-  };
-
-  const repeat = () => {
-    if (!canApply) return;
-    updateScene((draft) => {
-      draft.backgroundStyle.backgroundImage = `url("${assetUrl}")`;
-      draft.backgroundStyle.backgroundSize = `${asset.width}px ${asset.height}px`;
-      draft.backgroundStyle.backgroundRepeat = "repeat";
-      draft.backgroundStyle.backgroundPosition = "top left";
-    });
-    setOpen(false);
-  };
 
   return (
     <PopoverRoot open={open} onOpenChange={setOpen}>
@@ -293,73 +260,12 @@ function AssetDimensionSourcePopover({ asset }: { asset: SpriteAsset }) {
         align="center"
         className="w-80 border-white/14 bg-[#1a1a1a] text-foreground"
       >
-        <div className="flex flex-col gap-3">
-          <div className="font-[var(--font-ui)] text-[11px] font-bold uppercase tracking-[0.14em] text-white/68">
-            Dimension source
-          </div>
-
-          <div className="flex flex-col gap-1.5 font-mono text-[11px] text-white/72">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-white/45">Scene</span>
-              <span>
-                {sceneWidth} × {sceneHeight}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-white/45">Asset</span>
-              <span className="truncate">
-                {asset.width} × {asset.height}
-              </span>
-            </div>
-          </div>
-
-          {matchesScene ? (
-            <div className="border-l-2 border-[var(--accent)]/60 bg-white/[0.03] px-2 py-1.5 font-mono text-[11px] text-white/68">
-              Asset already matches scene size.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1 border-l-2 border-[var(--accent)]/60 bg-white/[0.03] px-2 py-1.5 font-mono text-[11px] text-white/72">
-              <span className="text-white/45">
-                Scaling asset to scene height ({sceneHeight}px) →
-              </span>
-              <span className="font-bold text-[var(--accent)]">
-                new scene size: {newSceneWidth} × {sceneHeight}
-              </span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="accent"
-              size="compact"
-              className="flex-1"
-              disabled={!canApply}
-              onClick={apply}
-            >
-              Apply
-            </Button>
-            <Button
-              type="button"
-              variant="muted"
-              size="compact"
-              className="flex-1"
-              disabled={!canApply}
-              onClick={repeat}
-            >
-              Repeat
-            </Button>
-            <Button
-              type="button"
-              variant="muted"
-              size="compact"
-              className="flex-1"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <AssetDimensionSourcePopoverContent
+          assetUrl={dimensionSource.url}
+          width={dimensionSource.width}
+          height={dimensionSource.height}
+          onClose={() => setOpen(false)}
+        />
       </PopoverContent>
     </PopoverRoot>
   );
@@ -421,8 +327,18 @@ function FolderAssetRow(props: {
     naturalHeight: measuredSize?.height,
   };
 
+  const dimensionSource = measuredSize
+    ? { url: sprite.url, width: measuredSize.width, height: measuredSize.height }
+    : undefined;
+
   return (
-    <AssetRow label={sprite.fileName} previewUrl={sprite.url} dragData={dragData} depth={depth} />
+    <AssetRow
+      label={sprite.fileName}
+      previewUrl={sprite.url}
+      dragData={dragData}
+      depth={depth}
+      dimensionSource={dimensionSource}
+    />
   );
 }
 
@@ -652,19 +568,8 @@ export function AssetsPanel(props: AssetsPanelProps) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto py-2 [scrollbar-width:thin]">
-        {filteredFolderSprites.length ? (
-          <TreeFolderView
-            folder={tree}
-            depth={0}
-            openFolders={resolvedOpen}
-            onToggle={toggleFolder}
-            projectAssetsBySourcePath={projectAssetsBySourcePath}
-            folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-          />
-        ) : null}
-
         {filteredProjectAssets.length ? (
-          <div className="pt-1">
+          <div>
             <FolderHeader
               label="In Project"
               count={filteredProjectAssets.length}
@@ -675,19 +580,35 @@ export function AssetsPanel(props: AssetsPanelProps) {
 
             {inProjectOpen ? (
               <div className="flex flex-col">
-                {filteredProjectAssets.map((asset) => (
-                  <AssetRow
-                    key={asset.id}
-                    label={asset.fileName}
-                    previewUrl={getAssetUrl(asset)}
-                    dragData={createProjectAssetDragData(asset)}
-                    depth={1}
-                    projectAsset={asset}
-                  />
-                ))}
+                {filteredProjectAssets.map((asset) => {
+                  const url = getAssetUrl(asset);
+                  return (
+                    <AssetRow
+                      key={asset.id}
+                      label={asset.fileName}
+                      previewUrl={url}
+                      dragData={createProjectAssetDragData(asset)}
+                      depth={1}
+                      dimensionSource={
+                        url ? { url, width: asset.width, height: asset.height } : undefined
+                      }
+                    />
+                  );
+                })}
               </div>
             ) : null}
           </div>
+        ) : null}
+
+        {filteredFolderSprites.length ? (
+          <TreeFolderView
+            folder={tree}
+            depth={0}
+            openFolders={resolvedOpen}
+            onToggle={toggleFolder}
+            projectAssetsBySourcePath={projectAssetsBySourcePath}
+            folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
+          />
         ) : null}
 
         {!filteredFolderSprites.length && !filteredProjectAssets.length ? (

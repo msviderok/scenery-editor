@@ -25,6 +25,7 @@ import {
 import type { EditorDispatch, EditorSelectors, EditorState, ResizeHandle } from "@/editor/types";
 import type { SpriteAsset, SpriteNode } from "@msviderok/sprite-editor-ast-schema";
 import { FloatingNodeToolbar } from "./FloatingNodeToolbar";
+import { SceneBackgroundToolbar } from "./SceneBackgroundToolbar";
 import { SceneCanvas } from "./SceneCanvas";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { Minus, Plus, Trash2 } from "lucide-react";
@@ -35,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 type WorkspaceProps = {
   state: EditorState;
   selectors: EditorSelectors;
+  selectedAsset: SpriteAsset | null;
   workspaceRef: React.RefObject<HTMLDivElement | null>;
   folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
   mutate: (mutation: (draft: EditorState) => void) => void;
@@ -63,6 +65,7 @@ export function Workspace(props: WorkspaceProps) {
   const {
     state,
     selectors,
+    selectedAsset,
     workspaceRef,
     folderSpriteSizeCacheRef,
     mutate,
@@ -213,6 +216,7 @@ export function Workspace(props: WorkspaceProps) {
       if (event.key === "Escape") {
         mutate((draft) => {
           draft.selectedNodeIds = [];
+          draft.backgroundSelected = false;
         });
       }
 
@@ -623,6 +627,7 @@ export function Workspace(props: WorkspaceProps) {
             if (!additive) {
               mutate((draft) => {
                 draft.selectedNodeIds = [];
+                draft.backgroundSelected = false;
               });
             }
 
@@ -640,36 +645,64 @@ export function Workspace(props: WorkspaceProps) {
               },
             });
 
-            beginPointerSession(event.pointerId, (moveEvent) => {
-              const current = screenToWorld(moveEvent.clientX, moveEvent.clientY);
+            const startClientX = event.clientX;
+            const startClientY = event.clientY;
+            let moved = false;
+            const hasBackgroundImage = Boolean(selectedScene.backgroundStyle.backgroundImage);
+            const insideScene =
+              origin.x >= 0 &&
+              origin.y >= 0 &&
+              origin.x <= selectedScene.size.width &&
+              origin.y <= selectedScene.size.height;
 
-              dispatch({
-                type: "setInteraction",
-                interaction: {
-                  type: "marquee",
-                  pointerId: event.pointerId,
-                  originX: origin.x,
-                  originY: origin.y,
-                  currentX: current.x,
-                  currentY: current.y,
-                  additive,
-                  baseSelection,
-                },
-              });
+            beginPointerSession(
+              event.pointerId,
+              (moveEvent) => {
+                if (
+                  !moved &&
+                  Math.hypot(moveEvent.clientX - startClientX, moveEvent.clientY - startClientY) > 3
+                ) {
+                  moved = true;
+                }
 
-              const hits = hitTestMarquee(selectedScene.nodes, {
-                x: Math.min(origin.x, current.x),
-                y: Math.min(origin.y, current.y),
-                width: Math.abs(current.x - origin.x),
-                height: Math.abs(current.y - origin.y),
-              });
+                const current = screenToWorld(moveEvent.clientX, moveEvent.clientY);
 
-              mutate((draft) => {
-                draft.selectedNodeIds = additive
-                  ? Array.from(new Set([...baseSelection, ...hits]))
-                  : hits;
-              });
-            });
+                dispatch({
+                  type: "setInteraction",
+                  interaction: {
+                    type: "marquee",
+                    pointerId: event.pointerId,
+                    originX: origin.x,
+                    originY: origin.y,
+                    currentX: current.x,
+                    currentY: current.y,
+                    additive,
+                    baseSelection,
+                  },
+                });
+
+                const hits = hitTestMarquee(selectedScene.nodes, {
+                  x: Math.min(origin.x, current.x),
+                  y: Math.min(origin.y, current.y),
+                  width: Math.abs(current.x - origin.x),
+                  height: Math.abs(current.y - origin.y),
+                });
+
+                mutate((draft) => {
+                  draft.selectedNodeIds = additive
+                    ? Array.from(new Set([...baseSelection, ...hits]))
+                    : hits;
+                });
+              },
+              () => {
+                if (moved || additive) return;
+                if (!hasBackgroundImage || !insideScene) return;
+                mutate((draft) => {
+                  if (draft.selectedNodeIds.length > 0) return;
+                  draft.backgroundSelected = true;
+                });
+              },
+            );
           }}
         >
           <div
@@ -698,10 +731,28 @@ export function Workspace(props: WorkspaceProps) {
               onNodePointerDown={handleStartDrag}
               onResizePointerDown={handleStartResize}
             />
+
+            {state.backgroundSelected ? (
+              <div
+                className="pointer-events-none absolute left-0 top-0 z-30 border-2 border-[var(--accent)]"
+                style={{
+                  width: `${selectedScene.size.width}px`,
+                  height: `${selectedScene.size.height}px`,
+                }}
+              />
+            ) : null}
           </div>
+
+          <SceneBackgroundToolbar
+            scene={selectedScene}
+            pan={pan}
+            zoom={zoom}
+            selected={state.backgroundSelected}
+          />
 
           <FloatingNodeToolbar
             node={selectors.singleSelectedNode}
+            asset={selectedAsset}
             toolbarPosition={toolbarPosition}
             onUpdateNode={updateNode}
             onDuplicateNode={onDuplicateNode}
