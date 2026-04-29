@@ -89,12 +89,6 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
   ],
   resolve: {
-    alias: {
-      "@msviderok/sprite-editor-ast-schema": new URL(
-        "../../packages/sprite-editor-ast-schema/src/index.ts",
-        import.meta.url,
-      ).pathname,
-    },
     tsconfigPaths: true,
   },
   server: {

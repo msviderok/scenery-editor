@@ -13,4 +13,21 @@ export default defineConfig({
       typeCheck: true,
     },
   },
+  pack: {
+    format: "esm",
+    dts: true,
+    sourcemap: true,
+  },
+  run: {
+    cache: true,
+    tasks: {
+      build: {
+        command: "vp run -v editor#build",
+        dependsOn: [
+          "@msviderok/sprite-editor-ast-schema#build",
+          "@msviderok/2d-scene-transform-vite-plugin#build",
+        ],
+      },
+    },
+  },
 });

@@ -13,13 +13,9 @@
     }
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts"
+    "build": "vp pack"
   },
   "dependencies": {
-    "zod": "4.3.6"
-  },
-  "devDependencies": {
-    "tsdown": "^0.21.10",
-    "typescript": "6.0.3"
+    "zod": "catalog:"
   }
 }
