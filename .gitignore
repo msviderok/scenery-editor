@@ -5,3 +5,7 @@ dist
 .sprite-editor
 *.log
 
+**/.env
+**/.env.*
+**/*.env
+**/*.env.*
