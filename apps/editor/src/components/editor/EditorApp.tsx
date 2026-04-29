@@ -301,6 +301,7 @@ export function EditorApp() {
                 mutate((draft) => {
                   draft.selectedSceneId = sceneId;
                   draft.selectedNodeIds = [];
+                  draft.backgroundSelected = false;
                 })
               }
               onClose={handleCloseScene}
@@ -450,13 +451,11 @@ export function EditorApp() {
                     {gridSizeBreakpoints.map((breakpoint) => (
                       <span
                         key={breakpoint}
-                        className="flex w-0 shrink-0 justify-center overflow-visible first:justify-start last:justify-end"
+                        className="flex w-0 shrink-0 justify-center overflow-visible"
                       >
                         <span
                           className={
-                            breakpoint === state.gridSize
-                              ? "font-bold text-[var(--accent)]"
-                              : undefined
+                            breakpoint === state.gridSize ? "font-bold text-accent" : undefined
                           }
                         >
                           {breakpoint}
@@ -488,6 +487,7 @@ export function EditorApp() {
             <Workspace
               state={state}
               selectors={selectors}
+              selectedAsset={selectedAsset}
               workspaceRef={workspaceRef}
               folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
               mutate={mutate}

@@ -94,6 +94,7 @@ export type EditorState = PersistedEditorUiState & {
   shiftHeld: boolean;
   persistenceError: string | null;
   previewOpen: boolean;
+  backgroundSelected: boolean;
 };
 
 export type EditorMutation = (draft: Draft<EditorState>) => void;
