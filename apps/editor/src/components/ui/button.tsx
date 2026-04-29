@@ -9,7 +9,7 @@ const buttonVariants = cva("", {
   variants: {
     variant: {
       iconButton:
-        "grid h-7 w-7 place-items-center border border-white/14 bg-white/[0.03] text-white/52 transition-colors duration-[120ms] hover:border-accent hover:text-foreground",
+        "grid h-7 w-7 place-items-center border border-white/14 bg-white/3 text-white/52 transition-colors duration-120 hover:border-accent hover:text-foreground",
       muted: `${sbButtonBase} bg-[#232323] text-white/80`,
       accent: `${sbButtonBase} bg-accent border-[color-mix(in_srgb,var(--accent)_55%,#000)] text-main-foreground`,
       choice:

@@ -4,9 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vp run editor#dev",
-    "build": "vp run @msviderok/sprite-editor-ast-schema#build && vp run @msviderok/2d-scene-transform-vite-plugin#build && vp run editor#build && vp run playground#build",
-    "dev:playground": "vp run playground#dev",
-    "build:playground": "vp run playground#build",
+    "build": "vp run @msviderok/sprite-editor-ast-schema#build && vp run @msviderok/2d-scene-transform-vite-plugin#build && vp run editor#build",
     "prepare": "vp config"
   },
   "devDependencies": {

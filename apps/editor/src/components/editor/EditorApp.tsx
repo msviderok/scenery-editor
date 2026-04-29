@@ -23,25 +23,26 @@ import { nextId, swapAtIndex } from "@/editor/geometry";
 import { getNextPersistenceSlot } from "@/editor/persistence";
 import { useEditorEffects } from "@/editor/useEditorEffects";
 import { useEditorState } from "@/editor/useEditorState";
+import { readSpriteProjectFromFile } from "@/lib/readSpriteProjectFromFile";
+import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import {
-  createDefaultScene,
-  parseSpriteProject,
-  type SpriteAsset,
-} from "@msviderok/sprite-editor-ast-schema";
+import { createDefaultScene, type SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
 import { Grid3x3, Play } from "lucide-react";
 import { PreviewOverlay } from "@/components/preview/PreviewOverlay";
 
 export function EditorApp() {
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const previewAstInputRef = useRef<HTMLInputElement>(null);
   const folderSpriteSizeCacheRef = useRef(new Map<string, { width: number; height: number }>());
   const autosaveTimerRef = useRef<number | null>(null);
   const pendingPersistencePayloadRef = useRef<string | null>(null);
   const nextPersistenceSlotRef = useRef<0 | 1>(getNextPersistenceSlot());
   const restoredWorkspaceScrollRef = useRef(false);
+  const navigate = useNavigate();
 
   const [newSceneOpen, setNewSceneOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<EditorDragData | null>(null);
+  const [previewAstError, setPreviewAstError] = useState<string | null>(null);
 
   const { state, dispatch, mutate, updateScene, updateNode, selectors } = useEditorState();
   const gridSizeBreakpoints: readonly number[] = GRID_SIZE_BREAKPOINTS;
@@ -91,8 +92,7 @@ export function EditorApp() {
 
   const handleImportProject = async (file: File | undefined) => {
     if (!file) return;
-    const text = await file.text();
-    const nextProject = parseSpriteProject(JSON.parse(text));
+    const nextProject = await readSpriteProjectFromFile(file);
     mutate((draft) => {
       draft.project = nextProject;
       draft.selectedSceneId = nextProject.scenes[0].id;
@@ -101,6 +101,27 @@ export function EditorApp() {
       draft.collisionEditorId = null;
       draft.viewportScale = DEFAULT_VIEWPORT_SCALE;
     });
+  };
+
+  const handlePreviewAst = async (file: File | undefined) => {
+    if (!file) return;
+
+    try {
+      const nextProject = await readSpriteProjectFromFile(file);
+      setPreviewAstError(null);
+      void navigate({
+        to: "/preview/imported",
+        state: (prev) => ({
+          ...prev,
+          importedPreview: {
+            project: nextProject,
+            sourceFileName: file.name,
+          },
+        }),
+      });
+    } catch (error) {
+      setPreviewAstError(error instanceof Error ? error.message : "Failed to parse AST.");
+    }
   };
 
   const handleUploadImages = async (files: FileList | null) => {
@@ -255,6 +276,17 @@ export function EditorApp() {
         }}
       >
         <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
+          <input
+            ref={previewAstInputRef}
+            hidden
+            type="file"
+            accept=".json,.sprite.json,application/json"
+            onChange={(event) => {
+              void handlePreviewAst(event.currentTarget.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
+
           {state.persistenceError ? (
             <div className="shrink-0 border-b border-[#e76464]/50 bg-[#281313] px-4 py-2 font-mono text-[10px] font-medium text-[#f0b1b1]">
               {state.persistenceError}
@@ -315,6 +347,25 @@ export function EditorApp() {
                       size="compact"
                       type="button"
                       className="h-8 px-3"
+                      onClick={() => previewAstInputRef.current?.click()}
+                    >
+                      Preview AST
+                    </Button>
+                  }
+                />
+                <TooltipContent>
+                  Preview imported AST JSON without replacing the current project
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="muted"
+                      size="compact"
+                      type="button"
+                      className="h-8 px-3"
                       disabled={!selectors.selectedScene}
                       onClick={() => dispatch({ type: "setPreviewOpen", previewOpen: true })}
                     >
@@ -344,6 +395,12 @@ export function EditorApp() {
               </Tooltip>
             </div>
           </header>
+
+          {previewAstError ? (
+            <div className="absolute top-[46px] right-3 z-20 max-w-sm border border-[#e76464]/50 bg-[#281313] px-3 py-2 font-mono text-[11px] text-[#f0b1b1] shadow-[2px_2px_0_#000]">
+              {previewAstError}
+            </div>
+          ) : null}
 
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <aside className="flex min-h-0 w-80 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#171717]">

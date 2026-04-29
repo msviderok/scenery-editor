@@ -94,7 +94,6 @@ Keep this section current when architecture, data model, persistence, or editor 
 ### Current implementation snapshot
 
 - The original standalone HTML/Babel scene-builder prototype has been replaced. The current product lives in `apps/editor` as a React 19 + TypeScript + TanStack Start app running through Vite+.
-- `apps/playground` is a second React 19 + TypeScript + Vite+ app used for importing exported sprite AST JSON and previewing scenes fullscreen without the editor chrome.
 - Shared project schema and serialization live in `packages/sprite-editor-ast-schema/src/index.ts` and are consumed via `@msviderok/sprite-editor-ast-schema`.
 - Editor-only state, geometry, drag-and-drop helpers, asset utilities, and persistence live under `apps/editor/src/editor`.
 - `apps/editor/src/components/editor/EditorApp.tsx` is the editor composition root, mounted from `apps/editor/src/routes/index.tsx`. Major UI ownership is:
@@ -147,6 +146,7 @@ Keep this section current when architecture, data model, persistence, or editor 
 - Uploading images reads them as data URLs and records their natural dimensions before inserting them into `project.assets`.
 - Export uses `buildEmbeddedExportProject()` and `serializeEmbeddedProject()` so every asset is embedded as a data URL in the exported JSON.
 - Import parses the JSON through `parseSpriteProject()` and resets selection plus editor UI state that depends on the previous project.
+- Custom AST preview also lives in `apps/editor` through the `/preview/imported` route, which previews the imported project's first scene without mutating editor state or autosave.
 - Autosave uses double-buffered React-specific `localStorage` slots:
   - active key: `sprite-editor-react:persistence:active-slot`
   - slots: `sprite-editor-react:persistence:slot-0` and `sprite-editor-react:persistence:slot-1`

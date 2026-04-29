@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PreviewImportedRouteImport } from './routes/preview/imported'
 import { Route as Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRouteImport } from './routes/[__sprite-editor__]/sprites[.]json'
 import { Route as Char91__spriteEditor__Char93SpritesSplatRouteImport } from './routes/[__sprite-editor__]/sprites/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreviewImportedRoute = PreviewImportedRouteImport.update({
+  id: '/preview/imported',
+  path: '/preview/imported',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute =
@@ -34,17 +40,20 @@ const Char91__spriteEditor__Char93SpritesSplatRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/__sprite-editor__/sprites.json': typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
+  '/preview/imported': typeof PreviewImportedRoute
   '/__sprite-editor__/sprites/$': typeof Char91__spriteEditor__Char93SpritesSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/__sprite-editor__/sprites.json': typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
+  '/preview/imported': typeof PreviewImportedRoute
   '/__sprite-editor__/sprites/$': typeof Char91__spriteEditor__Char93SpritesSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/__sprite-editor__/sprites.json': typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
+  '/preview/imported': typeof PreviewImportedRoute
   '/__sprite-editor__/sprites/$': typeof Char91__spriteEditor__Char93SpritesSplatRoute
 }
 export interface FileRouteTypes {
@@ -52,19 +61,26 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/__sprite-editor__/sprites.json'
+    | '/preview/imported'
     | '/__sprite-editor__/sprites/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/__sprite-editor__/sprites.json' | '/__sprite-editor__/sprites/$'
+  to:
+    | '/'
+    | '/__sprite-editor__/sprites.json'
+    | '/preview/imported'
+    | '/__sprite-editor__/sprites/$'
   id:
     | '__root__'
     | '/'
     | '/__sprite-editor__/sprites.json'
+    | '/preview/imported'
     | '/__sprite-editor__/sprites/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute: typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
+  PreviewImportedRoute: typeof PreviewImportedRoute
   Char91__spriteEditor__Char93SpritesSplatRoute: typeof Char91__spriteEditor__Char93SpritesSplatRoute
 }
 
@@ -75,6 +91,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preview/imported': {
+      id: '/preview/imported'
+      path: '/preview/imported'
+      fullPath: '/preview/imported'
+      preLoaderRoute: typeof PreviewImportedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/__sprite-editor__/sprites.json': {
@@ -98,6 +121,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute:
     Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute,
+  PreviewImportedRoute: PreviewImportedRoute,
   Char91__spriteEditor__Char93SpritesSplatRoute:
     Char91__spriteEditor__Char93SpritesSplatRoute,
 }

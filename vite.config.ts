@@ -7,5 +7,10 @@ export default defineConfig({
   fmt: {
     ignorePatterns: ["apps/editor/src/routeTree.gen.ts"],
   },
-  lint: { options: { typeAware: true, typeCheck: true } },
+  lint: {
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
+  },
 });
