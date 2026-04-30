@@ -64,30 +64,36 @@ export function useUploadThingAssets() {
     void refresh();
   }, [refresh]);
 
-  const deleteAsset = useCallback(
-    async (key: string) => {
-      setDeletingKeys((current) => new Set(current).add(key));
+  const deleteAssets = useCallback(
+    async (keys: string[]) => {
+      if (keys.length === 0) return;
+      setDeletingKeys((current) => {
+        const next = new Set(current);
+        for (const key of keys) next.add(key);
+        return next;
+      });
       setError(null);
 
       try {
         const response = await fetch("/api/uploadthing/files", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key }),
+          body: JSON.stringify({ keys }),
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to delete UploadThing asset (${response.status}).`);
+          throw new Error(`Failed to delete UploadThing asset(s) (${response.status}).`);
         }
 
-        setAssets((current) => current.filter((asset) => asset.key !== key));
+        const removeSet = new Set(keys);
+        setAssets((current) => current.filter((asset) => !removeSet.has(asset.key)));
         await refresh();
       } catch (deleteError) {
-        setError(deleteError instanceof Error ? deleteError.message : "Failed to delete asset.");
+        setError(deleteError instanceof Error ? deleteError.message : "Failed to delete asset(s).");
       } finally {
         setDeletingKeys((current) => {
           const next = new Set(current);
-          next.delete(key);
+          for (const key of keys) next.delete(key);
           return next;
         });
       }
@@ -95,5 +101,12 @@ export function useUploadThingAssets() {
     [refresh],
   );
 
-  return { assets, refresh, deleteAsset, deletingKeys, loading, error };
+  const deleteAsset = useCallback(
+    async (key: string) => {
+      await deleteAssets([key]);
+    },
+    [deleteAssets],
+  );
+
+  return { assets, refresh, deleteAsset, deleteAssets, deletingKeys, loading, error };
 }

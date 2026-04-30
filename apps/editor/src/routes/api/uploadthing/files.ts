@@ -19,14 +19,21 @@ export const Route = createFileRoute("/api/uploadthing/files")({
         return Response.json(withUrls);
       },
       DELETE: async ({ request }) => {
-        const body = (await request.json().catch(() => null)) as { key?: unknown } | null;
-        const key = typeof body?.key === "string" ? body.key : null;
+        const body = (await request.json().catch(() => null)) as {
+          key?: unknown;
+          keys?: unknown;
+        } | null;
+        const singleKey = typeof body?.key === "string" ? body.key : null;
+        const keysArray = Array.isArray(body?.keys)
+          ? (body.keys.filter((entry): entry is string => typeof entry === "string") as string[])
+          : [];
+        const target = keysArray.length > 0 ? keysArray : singleKey ? [singleKey] : [];
 
-        if (!key) {
-          return Response.json({ error: "Missing UploadThing file key." }, { status: 400 });
+        if (target.length === 0) {
+          return Response.json({ error: "Missing UploadThing file key(s)." }, { status: 400 });
         }
 
-        const result = await utapi.deleteFiles(key);
+        const result = await utapi.deleteFiles(target);
         return Response.json(result);
       },
     },

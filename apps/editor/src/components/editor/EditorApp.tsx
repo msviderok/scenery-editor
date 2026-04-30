@@ -415,6 +415,7 @@ export function EditorApp() {
                 projectAssets={projectAssets}
                 onUploadComplete={() => void handleUploadComplete()}
                 onDeleteUploadThingAsset={(key) => void uploadThingAssets.deleteAsset(key)}
+                onBulkDeleteUploadThingAssets={(keys) => void uploadThingAssets.deleteAssets(keys)}
                 deletingUploadThingAssetKeys={uploadThingAssets.deletingKeys}
               />
 
