@@ -7,6 +7,7 @@ import {
   SOLID_PERSISTENCE_SLOT_KEYS,
 } from "./constants";
 import {
+  createPersistedPayload,
   getNextPersistenceSlot,
   readPersistedEditorState,
   sanitizePersistedUiState,
@@ -127,5 +128,45 @@ describe("persistence", () => {
     expect(writePersistedPayload(storage, '{"second":true}', 1)).toBe(0);
     expect(storage.getItem(REACT_PERSISTENCE_ACTIVE_SLOT_KEY)).toBe("1");
     expect(storage.getItem(REACT_PERSISTENCE_SLOT_KEYS[1])).toBe('{"second":true}');
+  });
+
+  it("preserves linked scene background assets through persisted payloads", () => {
+    const project = createEmptyProject();
+    project.assets.asset_1 = {
+      id: "asset_1",
+      kind: "image",
+      fileName: "background.png",
+      width: 640,
+      height: 320,
+      dataUrl: "data:image/png;base64,abc",
+    };
+    project.scenes[0].backgroundAssetId = "asset_1";
+    project.scenes[0].backgroundStyle.backgroundImage = 'url("data:image/png;base64,abc")';
+    project.scenes[0].backgroundStyle.backgroundSize = "100% 100%";
+    project.scenes[0].backgroundStyle.backgroundRepeat = "no-repeat";
+    project.scenes[0].backgroundStyle.backgroundPosition = "center";
+
+    const payload = createPersistedPayload({
+      project,
+      selectedSceneId: project.scenes[0].id,
+      selectedNodeIds: [],
+      viewportScale: 0.75,
+      nodeStyleId: null,
+      collisionEditorId: null,
+      gridVisible: true,
+      gridSize: 4,
+      workspaceScroll: { left: 0, top: 0 },
+      interaction: null,
+      dragGhost: null,
+      shiftHeld: false,
+      persistenceError: null,
+      previewOpen: false,
+      backgroundSelected: false,
+    });
+
+    const storage = new MemoryStorage();
+    writePersistedPayload(storage, payload, 0);
+
+    expect(readPersistedEditorState(storage)?.project.scenes[0].backgroundAssetId).toBe("asset_1");
   });
 });

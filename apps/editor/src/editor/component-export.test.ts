@@ -68,7 +68,7 @@ describe("component export", () => {
     expect(files[2].content).toContain("Component: Level2");
   });
 
-  it("embeds remote assets before generating TSX", async () => {
+  it("preserves remote asset URLs when generating TSX", async () => {
     const project = createProjectWithNode();
     project.assets.asset_1 = {
       ...project.assets.asset_1,
@@ -86,9 +86,9 @@ describe("component export", () => {
       fetchMock,
     );
 
-    expect(fetchMock).toHaveBeenCalledWith("/sprite.png");
-    expect(file.content).toContain("data:image/png;base64,");
-    expect(file.content).not.toContain("/sprite.png");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(file.content).toContain("/sprite.png");
+    expect(file.content).not.toContain("data:image/png;base64,");
   });
 
   it("preserves style overrides, tint, collisions, missing asset fallback, and safe names", async () => {

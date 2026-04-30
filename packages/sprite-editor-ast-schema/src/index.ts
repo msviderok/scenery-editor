@@ -191,6 +191,7 @@ function normalizeSpriteProject(project: SpriteProject): SpriteProject {
         height: scene.size.height,
       },
       backgroundStyle: normalizeBackgroundStyle(scene.backgroundStyle),
+      backgroundAssetId: scene.backgroundAssetId,
       nodes: scene.nodes.map((node) => ({
         id: node.id,
         assetId: node.assetId,

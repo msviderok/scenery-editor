@@ -5,7 +5,7 @@ import type {
   SpriteProject,
   SpriteScene,
 } from "@msviderok/sprite-editor-ast-schema";
-import { buildEmbeddedExportProject, getAssetUrl } from "./assets";
+import { getAssetUrl } from "./assets";
 
 export type ComponentExportFramework = "solid" | "react";
 export type ComponentExportLayout = "single-file" | "separate-files";
@@ -45,14 +45,14 @@ export async function buildComponentExportFiles(
   options: ComponentExportOptions,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ComponentExportFile[]> {
-  const embeddedProject = await buildEmbeddedExportProject(project, fetchImpl);
-  const targets = createSceneExportTargets(embeddedProject.scenes);
+  void fetchImpl;
+  const targets = createSceneExportTargets(project.scenes);
 
   if (options.layout === "separate-files") {
     return [
       ...targets.map((target) => ({
         fileName: target.fileName,
-        content: renderSceneFile(embeddedProject, target, options.framework),
+        content: renderSceneFile(project, target, options.framework),
         mimeType: "text/typescript-jsx" as const,
       })),
       {
@@ -66,7 +66,7 @@ export async function buildComponentExportFiles(
   return [
     {
       fileName: createSingleFileName(options.projectName),
-      content: renderSingleFile(embeddedProject, targets, options.framework),
+      content: renderSingleFile(project, targets, options.framework),
       mimeType: "text/typescript-jsx",
     },
   ];
