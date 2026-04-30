@@ -27,29 +27,29 @@ export function NewSceneModal(props: NewSceneModalProps) {
     "border-accent text-accent shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]";
 
   const [name, setName] = useState("");
-  const [presetIndex, setPresetIndex] = useState(1);
+  const [presetIndex, setPresetIndex] = useState(2);
   const [customMode, setCustomMode] = useState(false);
-  const [customWidth, setCustomWidth] = useState(1280);
-  const [customHeight, setCustomHeight] = useState(720);
+  const [customWidth, setCustomWidth] = useState(1920);
+  const [customHeight, setCustomHeight] = useState(1080);
 
   useEffect(() => {
     if (!open) return;
     setName("");
-    setPresetIndex(1);
+    setPresetIndex(2);
     setCustomMode(false);
-    setCustomWidth(1280);
-    setCustomHeight(720);
+    setCustomWidth(1920);
+    setCustomHeight(1080);
   }, [open]);
 
   const activeSize = useMemo(() => {
     if (customMode) {
       return {
-        width: Math.max(MIN_SCENE_SIZE, Number(customWidth) || 1280),
-        height: Math.max(MIN_SCENE_SIZE, Number(customHeight) || 720),
+        width: Math.max(MIN_SCENE_SIZE, Number(customWidth) || 1920),
+        height: Math.max(MIN_SCENE_SIZE, Number(customHeight) || 1080),
       };
     }
 
-    const preset = SCENE_PRESETS[presetIndex] ?? SCENE_PRESETS[1];
+    const preset = SCENE_PRESETS[presetIndex] ?? SCENE_PRESETS[2];
     return {
       width: preset.width,
       height: preset.height,

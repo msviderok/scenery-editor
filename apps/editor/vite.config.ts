@@ -5,6 +5,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { NodeRequest, sendNodeResponse } from "srvx/node";
 import { defineConfig } from "vite-plus";
 import type { Plugin } from "vite-plus";
+import { nitro } from "nitro/vite";
 
 const START_SERVER_ENVIRONMENT_NAME = "ssr";
 const START_SERVER_ENTRY = "virtual:tanstack-start-server-entry";
@@ -85,6 +86,7 @@ export default defineConfig({
       },
     }),
     tanstackStartVitePlusDevMiddleware(),
+    nitro({ preset: "vercel" }),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
   ],

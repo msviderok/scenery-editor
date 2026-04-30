@@ -34,6 +34,7 @@
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "nitro": "catalog:",
     "shadcn": "^4.4.0",
     "srvx": "catalog:",
     "tailwindcss": "^4.2.4",

@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "vp run --no-cache build",
+  "outputDirectory": "../../dist"
+}

@@ -117,8 +117,8 @@ export function createDefaultScene(id = "scene_1", name = "Scene 1"): SpriteScen
     id,
     name,
     size: {
-      width: 1280,
-      height: 720,
+      width: 1920,
+      height: 1080,
     },
     backgroundStyle: {
       backgroundColor: "#111220",
