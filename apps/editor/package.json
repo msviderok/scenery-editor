@@ -35,6 +35,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "shadcn": "^4.4.0",
+    "srvx": "catalog:",
     "tailwindcss": "^4.2.4",
     "typescript": "catalog:",
     "vite": "catalog:",
