@@ -32,6 +32,7 @@ type StyleValue = string | number;
 type StyleEntries = Array<[string, StyleValue | undefined]>;
 
 const SCENE_CLASS = "relative shrink-0 overflow-hidden [image-rendering:pixelated]";
+const ASSET_LAYER_CLASS = "absolute inset-0";
 const NODE_CLASS = "absolute origin-center";
 const NODE_IMAGE_CLASS = "absolute inset-0 origin-center [image-rendering:pixelated]";
 const TINT_CLASS = "absolute inset-0 opacity-45 mix-blend-multiply";
@@ -77,9 +78,11 @@ function renderSingleFile(
   targets: SceneExportTarget[],
   framework: ComponentExportFramework,
 ) {
-  return `${targets
-    .map((target) => renderSceneComponent(project, target.scene, target.componentName, framework))
-    .join("\n\n")}
+  return `${renderTypeImport(framework)}
+
+${targets
+  .map((target) => renderSceneComponent(project, target.scene, target.componentName, framework))
+  .join("\n\n")}
 
 ${renderSceneRegistry(targets)}
 `;
@@ -90,8 +93,16 @@ function renderSceneFile(
   target: SceneExportTarget,
   framework: ComponentExportFramework,
 ) {
-  return `${renderSceneComponent(project, target.scene, target.componentName, framework)}
+  return `${renderTypeImport(framework)}
+
+${renderSceneComponent(project, target.scene, target.componentName, framework)}
 `;
+}
+
+function renderTypeImport(framework: ComponentExportFramework) {
+  return framework === "solid"
+    ? 'import { type ParentProps } from "solid-js";'
+    : 'import { type PropsWithChildren } from "react";';
 }
 
 function renderIndexFile(targets: SceneExportTarget[]) {
@@ -132,14 +143,22 @@ function renderSceneComponent(
   framework: ComponentExportFramework,
 ) {
   const classAttr = framework === "solid" ? "class" : "className";
+  const signature =
+    framework === "solid"
+      ? `${componentName}(props: ParentProps<{}>)`
+      : `${componentName}({ children }: PropsWithChildren<{}>)`;
+  const childrenExpression = framework === "solid" ? "props.children" : "children";
 
-  return `export function ${componentName}() {
+  return `export function ${signature} {
   return (
     <div
       ${classAttr}=${stringLiteral(SCENE_CLASS)}
       style={${renderStyleObject(createSceneStyleEntries(scene.backgroundStyle, scene), framework)}}
     >
-${scene.nodes.map((node) => renderNode(project, node, framework, 6)).join("\n")}
+      <div ${classAttr}=${stringLiteral(ASSET_LAYER_CLASS)}>
+${scene.nodes.map((node) => renderNode(project, node, framework, 8)).join("\n")}
+      </div>
+      {${childrenExpression}}
     </div>
   );
 }`;

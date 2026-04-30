@@ -12,8 +12,12 @@ describe("component export", () => {
     });
 
     expect(file.fileName).toBe("sprite-scenes.tsx");
+    expect(file.content).toContain('import type { ParentProps } from "solid-js";');
     expect(file.content).toContain('class="relative shrink-0 overflow-hidden');
     expect(file.content).not.toContain("className=");
+    expect(file.content).toContain("export function Scene1(props: ParentProps<{}>)");
+    expect(file.content).toContain('      <div class="absolute inset-0">');
+    expect(file.content).toContain("      {props.children}");
     expect(file.content).toContain('"background-color": "#223344"');
     expect(file.content).toContain('left: "12px"');
     expect(file.content).toContain('transform: "rotate(30deg)"');
@@ -29,7 +33,11 @@ describe("component export", () => {
       layout: "single-file",
     });
 
+    expect(file.content).toContain('import type { PropsWithChildren } from "react";');
     expect(file.content).toContain('className="relative shrink-0 overflow-hidden');
+    expect(file.content).toContain("export function Scene1({ children }: PropsWithChildren<{}>)");
+    expect(file.content).toContain('      <div className="absolute inset-0">');
+    expect(file.content).toContain("      {children}");
     expect(file.content).toContain('backgroundColor: "#223344"');
     expect(file.content).not.toContain('"background-color"');
   });
@@ -43,8 +51,8 @@ describe("component export", () => {
       layout: "single-file",
     });
 
-    expect(file.content).toContain("export function Scene1()");
-    expect(file.content).toContain("export function BossRoom()");
+    expect(file.content).toContain("export function Scene1(props: ParentProps<{}>)");
+    expect(file.content).toContain("export function BossRoom(props: ParentProps<{}>)");
     expect(file.content).toContain("export const scenes = [");
     expect(file.content).toContain('{ id: "scene_2", name: "Boss Room", Component: BossRoom }');
   });
@@ -60,8 +68,13 @@ describe("component export", () => {
     });
 
     expect(files.map((file) => file.fileName)).toEqual(["level.tsx", "level2.tsx", "index.ts"]);
-    expect(files[0].content).toContain("export function Level()");
-    expect(files[1].content).toContain("export function Level2()");
+    expect(files[0].content).toContain('import type { PropsWithChildren } from "react";');
+    expect(files[0].content).toContain(
+      "export function Level({ children }: PropsWithChildren<{}>)",
+    );
+    expect(files[1].content).toContain(
+      "export function Level2({ children }: PropsWithChildren<{}>)",
+    );
     expect(files[2].content).toContain('import { Level } from "./level";');
     expect(files[2].content).toContain('import { Level2 } from "./level2";');
     expect(files[2].content).toContain("export { Level, Level2 };");
@@ -109,7 +122,7 @@ describe("component export", () => {
       layout: "single-file",
     });
 
-    expect(file.content).toContain("export function Scene1()");
+    expect(file.content).toContain("export function Scene1(props: ParentProps<{}>)");
     expect(file.content).toContain('"background-color": "#112233"');
     expect(file.content).toContain('"background-repeat": "repeat-x"');
     expect(file.content).toContain('"background-size": "8px 8px"');
