@@ -6,11 +6,13 @@ type AssetDimensionSourcePopoverContentProps = {
   width: number;
   height: number;
   onClose: () => void;
+  assetId?: string;
+  registerAsset?: { name: string; mimeType?: string };
 };
 
 export function AssetDimensionSourcePopoverContent(props: AssetDimensionSourcePopoverContentProps) {
-  const { assetUrl, width, height, onClose } = props;
-  const { state, updateScene } = useEditorState();
+  const { assetUrl, width, height, onClose, assetId, registerAsset } = props;
+  const { state, updateScene, setSceneBackgroundFromAsset } = useEditorState();
 
   const scene =
     state.project.scenes.find((entry) => entry.id === state.selectedSceneId) ??
@@ -24,13 +26,26 @@ export function AssetDimensionSourcePopoverContent(props: AssetDimensionSourcePo
 
   const apply = () => {
     if (!canApply) return;
-    updateScene((draft) => {
-      draft.size.width = newSceneWidth;
-      draft.backgroundStyle.backgroundImage = `url("${assetUrl}")`;
-      draft.backgroundStyle.backgroundSize = "100% 100%";
-      draft.backgroundStyle.backgroundRepeat = "no-repeat";
-      draft.backgroundStyle.backgroundPosition = "center";
-    });
+    if (assetId) {
+      setSceneBackgroundFromAsset({ kind: "existing", assetId });
+    } else if (registerAsset) {
+      setSceneBackgroundFromAsset({
+        kind: "register",
+        url: assetUrl,
+        name: registerAsset.name,
+        width,
+        height,
+        mimeType: registerAsset.mimeType,
+      });
+    } else {
+      updateScene((draft) => {
+        draft.size.width = newSceneWidth;
+        draft.backgroundStyle.backgroundImage = `url("${assetUrl}")`;
+        draft.backgroundStyle.backgroundSize = "100% 100%";
+        draft.backgroundStyle.backgroundRepeat = "no-repeat";
+        draft.backgroundStyle.backgroundPosition = "center";
+      });
+    }
     onClose();
   };
 

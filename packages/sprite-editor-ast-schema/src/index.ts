@@ -71,6 +71,7 @@ export const spriteSceneSchema = z
       })
       .strict(),
     backgroundStyle: backgroundStyleSchema,
+    backgroundAssetId: z.string().optional(),
     nodes: z.array(spriteNodeSchema),
   })
   .strict();

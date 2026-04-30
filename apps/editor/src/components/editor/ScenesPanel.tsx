@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { NumberField } from "@/components/ui/number-field";
 import { MIN_NODE_SIZE, MIN_SCENE_SIZE } from "@/editor/constants";
 import { restoreAspectRatio } from "@/editor/geometry";
+import { useEditorState } from "@/editor/useEditorState";
 import type { SpriteAsset, SpriteNode, SpriteProject } from "@msviderok/sprite-editor-ast-schema";
 
 type ScenesPanelProps = {
@@ -27,8 +28,11 @@ function parseBackgroundSize(value: string | undefined, fallback: number): numbe
 
 export function ScenesPanel(props: ScenesPanelProps) {
   const { selectedScene, selectedNode, selectedAsset, onUpdateScene, onUpdateNode } = props;
+  const { setSceneHeight } = useEditorState();
 
   if (!selectedNode || !selectedAsset) {
+    const linkedToBgAsset = Boolean(selectedScene.backgroundAssetId);
+    const lockedInputClass = `${textInputClass} cursor-not-allowed opacity-50`;
     return (
       <div className="min-h-0 shrink-0 overflow-y-auto border-t border-white/10 px-3 py-3">
         <div className="mb-3 flex items-center justify-between">
@@ -60,12 +64,15 @@ export function ScenesPanel(props: ScenesPanelProps) {
               integer
               minValue={MIN_SCENE_SIZE}
               value={selectedScene.size.width}
-              className={textInputClass}
-              onValueChange={(value) =>
+              readOnly={linkedToBgAsset}
+              disabled={linkedToBgAsset}
+              className={linkedToBgAsset ? lockedInputClass : textInputClass}
+              onValueChange={(value) => {
+                if (linkedToBgAsset) return;
                 onUpdateScene((scene) => {
                   scene.size.width = value;
-                })
-              }
+                });
+              }}
             />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -75,14 +82,23 @@ export function ScenesPanel(props: ScenesPanelProps) {
               minValue={MIN_SCENE_SIZE}
               value={selectedScene.size.height}
               className={textInputClass}
-              onValueChange={(value) =>
-                onUpdateScene((scene) => {
-                  scene.size.height = value;
-                })
-              }
+              onValueChange={(value) => {
+                if (linkedToBgAsset) {
+                  setSceneHeight(value);
+                } else {
+                  onUpdateScene((scene) => {
+                    scene.size.height = value;
+                  });
+                }
+              }}
             />
           </label>
         </div>
+        {linkedToBgAsset ? (
+          <div className="mt-2 font-mono text-[10px] leading-4 text-white/45">
+            Width is derived from the linked background asset.
+          </div>
+        ) : null}
       </div>
     );
   }

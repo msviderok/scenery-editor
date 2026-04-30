@@ -34,7 +34,13 @@ function AssetRow(props: {
   previewUrl: string;
   dragData: AssetDragData;
   depth: number;
-  dimensionSource?: { url: string; width: number; height: number };
+  dimensionSource?: {
+    url: string;
+    width: number;
+    height: number;
+    assetId?: string;
+    registerAsset?: { name: string; mimeType?: string };
+  };
   deleteSource?: {
     key: string;
     name: string;
@@ -154,7 +160,13 @@ function AssetRow(props: {
 function AssetDimensionSourceRowButton({
   dimensionSource,
 }: {
-  dimensionSource: { url: string; width: number; height: number };
+  dimensionSource: {
+    url: string;
+    width: number;
+    height: number;
+    assetId?: string;
+    registerAsset?: { name: string; mimeType?: string };
+  };
 }) {
   const [open, setOpen] = useState(false);
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
@@ -196,6 +208,8 @@ function AssetDimensionSourceRowButton({
           assetUrl={dimensionSource.url}
           width={dimensionSource.width}
           height={dimensionSource.height}
+          assetId={dimensionSource.assetId}
+          registerAsset={dimensionSource.registerAsset}
           onClose={() => setOpen(false)}
         />
       </PopoverContent>
@@ -630,7 +644,9 @@ export function AssetsPanel(props: AssetsPanelProps) {
                     dragData={createProjectAssetDragData(asset)}
                     depth={1}
                     dimensionSource={
-                      url ? { url, width: asset.width, height: asset.height } : undefined
+                      url
+                        ? { url, width: asset.width, height: asset.height, assetId: asset.id }
+                        : undefined
                     }
                   />
                 );
@@ -650,7 +666,12 @@ export function AssetsPanel(props: AssetsPanelProps) {
                   previewUrl={asset.url}
                   dragData={createUploadThingAssetDragData(asset)}
                   depth={1}
-                  dimensionSource={{ url: asset.url, width: asset.width, height: asset.height }}
+                  dimensionSource={{
+                    url: asset.url,
+                    width: asset.width,
+                    height: asset.height,
+                    registerAsset: { name: asset.name },
+                  }}
                   deleteSource={{
                     key: asset.key,
                     name: asset.name,

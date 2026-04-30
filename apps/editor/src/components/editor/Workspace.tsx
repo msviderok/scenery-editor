@@ -119,17 +119,15 @@ export function Workspace(props: WorkspaceProps) {
   useEffect(() => {
     if (!viewportSize.width || !viewportSize.height) return;
 
+    // Only recenter on scene change or viewport resize. Scene size changes
+    // (e.g. height edits) preserve the current pan so the scene grows/shrinks
+    // anchored at the top-left of its current on-screen position.
     setPan({
       x: Math.round((viewportSize.width - selectedScene.size.width * zoom) / 2),
       y: Math.round((viewportSize.height - selectedScene.size.height * zoom) / 2),
     });
-  }, [
-    selectedScene.id,
-    selectedScene.size.height,
-    selectedScene.size.width,
-    viewportSize.height,
-    viewportSize.width,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedScene.id, viewportSize.height, viewportSize.width]);
 
   const applyZoomAtClientPoint = (
     nextZoom: number,

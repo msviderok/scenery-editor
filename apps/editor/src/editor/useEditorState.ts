@@ -2,9 +2,14 @@ import { produce } from "immer";
 import { useMemo } from "react";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
-import { createEmptyProject, type SpriteNode } from "@msviderok/sprite-editor-ast-schema";
-import { DEFAULT_GRID_SIZE, DEFAULT_VIEWPORT_SCALE } from "./constants";
-import { calculateToolbarPosition, getMarqueeRect } from "./geometry";
+import {
+  createEmptyProject,
+  type SpriteAsset,
+  type SpriteNode,
+} from "@msviderok/sprite-editor-ast-schema";
+import { getAssetUrl } from "./assets";
+import { DEFAULT_GRID_SIZE, DEFAULT_VIEWPORT_SCALE, MIN_SCENE_SIZE } from "./constants";
+import { calculateToolbarPosition, getMarqueeRect, nextId } from "./geometry";
 import { readPersistedEditorState, sanitizePersistedUiState } from "./persistence";
 import type {
   EditorAction,
@@ -193,12 +198,107 @@ export function useEditorState() {
     });
   };
 
+  type SetSceneBackgroundInput =
+    | { kind: "existing"; assetId: string }
+    | {
+        kind: "register";
+        url: string;
+        name: string;
+        width: number;
+        height: number;
+        mimeType?: string;
+      };
+
+  const setSceneBackgroundFromAsset = (input: SetSceneBackgroundInput | string) => {
+    const normalized: SetSceneBackgroundInput =
+      typeof input === "string" ? { kind: "existing", assetId: input } : input;
+
+    mutate((draft) => {
+      let asset: SpriteAsset | undefined;
+      if (normalized.kind === "existing") {
+        asset = draft.project.assets[normalized.assetId];
+      } else {
+        const existing = Object.values(draft.project.assets).find(
+          (entry) => entry.url === normalized.url || entry.dataUrl === normalized.url,
+        );
+        if (existing) {
+          asset = existing;
+        } else {
+          if (!(normalized.width > 0 && normalized.height > 0)) return;
+          const id = nextId("asset", Object.keys(draft.project.assets));
+          const next: SpriteAsset = {
+            id,
+            kind: "image",
+            fileName: normalized.name,
+            width: normalized.width,
+            height: normalized.height,
+            mimeType: normalized.mimeType ?? "image/*",
+            url: normalized.url,
+          };
+          draft.project.assets[id] = next;
+          asset = next;
+        }
+      }
+
+      if (!asset) return;
+      const url = getAssetUrl(asset);
+      if (!url) return;
+      if (!(asset.height > 0)) return;
+      const ratio = asset.width / asset.height;
+
+      const scene = draft.project.scenes.find((entry) => entry.id === draft.selectedSceneId);
+      if (!scene) return;
+      scene.backgroundAssetId = asset.id;
+      scene.backgroundStyle.backgroundImage = `url("${url}")`;
+      scene.backgroundStyle.backgroundSize = "100% 100%";
+      scene.backgroundStyle.backgroundRepeat = "no-repeat";
+      scene.backgroundStyle.backgroundPosition = "center";
+      const height = Math.max(MIN_SCENE_SIZE, scene.size.height);
+      scene.size.height = height;
+      scene.size.width = Math.max(MIN_SCENE_SIZE, Math.round(height * ratio));
+    });
+  };
+
+  const setSceneHeight = (height: number) => {
+    if (!Number.isFinite(height)) return;
+    const clamped = Math.max(MIN_SCENE_SIZE, Math.round(height));
+    mutate((draft) => {
+      const scene = draft.project.scenes.find((entry) => entry.id === draft.selectedSceneId);
+      if (!scene) return;
+      scene.size.height = clamped;
+      const linkedId = scene.backgroundAssetId;
+      if (linkedId) {
+        const asset = draft.project.assets[linkedId];
+        if (asset && asset.height > 0) {
+          const ratio = asset.width / asset.height;
+          scene.size.width = Math.max(MIN_SCENE_SIZE, Math.round(clamped * ratio));
+        }
+      }
+    });
+  };
+
+  const removeSceneBackground = () => {
+    mutate((draft) => {
+      const scene = draft.project.scenes.find((entry) => entry.id === draft.selectedSceneId);
+      if (!scene) return;
+      scene.backgroundAssetId = undefined;
+      scene.backgroundStyle.backgroundImage = undefined;
+      scene.backgroundStyle.backgroundSize = undefined;
+      scene.backgroundStyle.backgroundRepeat = undefined;
+      scene.backgroundStyle.backgroundPosition = undefined;
+      draft.backgroundSelected = false;
+    });
+  };
+
   return {
     state,
     dispatch,
     mutate,
     updateScene,
     updateNode,
+    setSceneBackgroundFromAsset,
+    setSceneHeight,
+    removeSceneBackground,
     selectors,
   };
 }

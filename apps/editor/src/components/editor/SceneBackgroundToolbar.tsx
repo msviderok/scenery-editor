@@ -1,7 +1,8 @@
-import { Ratio, Trash2, X } from "lucide-react";
+import { Lock, Ratio, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { SpriteScene } from "@msviderok/sprite-editor-ast-schema";
 import { readImageSize } from "@/editor/assets";
+import { MIN_SCENE_SIZE } from "@/editor/constants";
 import { useEditorState } from "@/editor/useEditorState";
 import { Button } from "@/components/ui/button";
 import { PopoverContent, PopoverRoot, PopoverTrigger } from "@/components/ui/popover";
@@ -23,13 +24,29 @@ function extractBackgroundUrl(value: string | undefined | null): string | null {
 
 export function SceneBackgroundToolbar(props: SceneBackgroundToolbarProps) {
   const { scene, pan, selected } = props;
-  const { mutate, updateScene } = useEditorState();
+  const { state, mutate, setSceneHeight, removeSceneBackground } = useEditorState();
   const url = extractBackgroundUrl(scene.backgroundStyle.backgroundImage);
 
-  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const linkedAsset = scene.backgroundAssetId
+    ? state.project.assets[scene.backgroundAssetId]
+    : undefined;
+  const linked = Boolean(linkedAsset);
+
+  const [size, setSize] = useState<{ width: number; height: number } | null>(
+    linkedAsset ? { width: linkedAsset.width, height: linkedAsset.height } : null,
+  );
   const [dimensionOpen, setDimensionOpen] = useState(false);
+  const [heightDraft, setHeightDraft] = useState<string>(() => String(scene.size.height));
 
   useEffect(() => {
+    setHeightDraft(String(scene.size.height));
+  }, [scene.size.height]);
+
+  useEffect(() => {
+    if (linkedAsset) {
+      setSize({ width: linkedAsset.width, height: linkedAsset.height });
+      return;
+    }
     if (!url) {
       setSize(null);
       return;
@@ -43,7 +60,7 @@ export function SceneBackgroundToolbar(props: SceneBackgroundToolbarProps) {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, linkedAsset]);
 
   useEffect(() => {
     setDimensionOpen(false);
@@ -61,13 +78,18 @@ export function SceneBackgroundToolbar(props: SceneBackgroundToolbarProps) {
   };
 
   const removeBackground = () => {
-    updateScene((draft) => {
-      draft.backgroundStyle.backgroundImage = undefined;
-      draft.backgroundStyle.backgroundSize = undefined;
-      draft.backgroundStyle.backgroundRepeat = undefined;
-      draft.backgroundStyle.backgroundPosition = undefined;
-    });
-    clearSelection();
+    removeSceneBackground();
+  };
+
+  const commitHeight = () => {
+    const parsed = Number(heightDraft);
+    if (!Number.isFinite(parsed)) {
+      setHeightDraft(String(scene.size.height));
+      return;
+    }
+    const clamped = Math.max(MIN_SCENE_SIZE, Math.round(parsed));
+    setSceneHeight(clamped);
+    setHeightDraft(String(clamped));
   };
 
   return (
@@ -110,6 +132,7 @@ export function SceneBackgroundToolbar(props: SceneBackgroundToolbarProps) {
               assetUrl={url}
               width={size.width}
               height={size.height}
+              assetId={scene.backgroundAssetId}
               onClose={() => setDimensionOpen(false)}
             />
           ) : (
@@ -117,6 +140,41 @@ export function SceneBackgroundToolbar(props: SceneBackgroundToolbarProps) {
           )}
         </PopoverContent>
       </PopoverRoot>
+
+      <div className="flex items-center gap-1 border border-white/12 bg-[#232323] px-1.5 py-[2px] font-mono text-[11px] text-white/58">
+        <span className="text-white/45">H</span>
+        <input
+          type="number"
+          min={MIN_SCENE_SIZE}
+          value={heightDraft}
+          onChange={(event) => setHeightDraft(event.currentTarget.value)}
+          onBlur={commitHeight}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commitHeight();
+              event.currentTarget.blur();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setHeightDraft(String(scene.size.height));
+              event.currentTarget.blur();
+            }
+          }}
+          className="h-5 w-12 bg-transparent text-right text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        {linked ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="grid h-3.5 w-3.5 place-items-center text-[var(--accent)]">
+                  <Lock className="h-3 w-3" />
+                </span>
+              }
+            />
+            <TooltipContent>Width follows asset aspect ratio</TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
 
       <Tooltip>
         <TooltipTrigger
