@@ -16,6 +16,7 @@ import { useEditorEffects } from "@/editor/useEditorEffects";
 import { useEditorState } from "@/editor/useEditorState";
 import { useUploadThingAssets } from "@/editor/useUploadThingAssets";
 import { readSpriteProjectFromFile } from "@/lib/readSpriteProjectFromFile";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { createDefaultScene } from "@msviderok/sprite-editor-ast-schema";
@@ -389,21 +390,33 @@ export function EditorApp() {
                     }}
                     className="py-1"
                   />
-                  <div className="mt-1 flex h-3 justify-between font-mono text-[8px] text-white/24">
-                    {gridSizeBreakpoints.map((breakpoint) => (
-                      <span
-                        key={breakpoint}
-                        className="flex w-0 shrink-0 justify-center overflow-visible"
-                      >
+                  <div className="mt-1 flex justify-between font-mono text-[8px] leading-none text-white/24">
+                    {gridSizeBreakpoints.map((breakpoint) => {
+                      const isActive = breakpoint === state.gridSize;
+                      return (
                         <span
-                          className={
-                            breakpoint === state.gridSize ? "font-bold text-accent" : undefined
-                          }
+                          key={breakpoint}
+                          className="flex w-0 shrink-0 justify-center overflow-visible"
                         >
-                          {breakpoint}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              mutate((draft) => {
+                                draft.gridSize = breakpoint;
+                              });
+                            }}
+                            className={cn(
+                              "inline-flex h-4 min-w-[14px] cursor-pointer items-center justify-center rounded-sm px-1 text-[8px] leading-none transition-colors",
+                              isActive
+                                ? "bg-accent/15 font-bold text-accent"
+                                : "text-white/38 hover:bg-white/[0.06] hover:text-white/86",
+                            )}
+                          >
+                            {breakpoint}
+                          </button>
                         </span>
-                      </span>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>

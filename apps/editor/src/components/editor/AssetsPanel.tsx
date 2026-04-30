@@ -1,4 +1,4 @@
-import { Ratio, Search, Trash2, Upload, X } from "lucide-react";
+import { Loader2, Ratio, Search, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/react";
 import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
@@ -63,16 +63,19 @@ function AssetRow(props: {
     data: dragData,
   });
 
+  const isDeleting = !!deleteSource?.isDeleting;
   const button = (
     <Button
       ref={ref}
       type="button"
       onClick={onSelect}
+      disabled={isDeleting}
       className={cn(
         "flex w-full touch-none cursor-grab items-center gap-2 py-1.5 text-left text-white/58 transition-[color,opacity,background-color] hover:bg-white/[0.04] hover:text-white/86 active:cursor-grabbing",
         isDragging && "opacity-35",
         isSelected &&
           "bg-[var(--accent)]/12 text-white/92 shadow-[inset_2px_0_0_var(--accent)] hover:bg-[var(--accent)]/16",
+        isDeleting && "cursor-wait opacity-50",
       )}
       style={{
         paddingLeft: `${16 + depth * 12}px`,
@@ -122,16 +125,22 @@ function AssetRow(props: {
   return (
     <div className="group relative flex w-full items-center">
       {trigger}
-      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[open=true]:opacity-100">
-        <div className="pointer-events-auto">
-          {dimensionSource ? (
-            <AssetDimensionSourceRowButton dimensionSource={dimensionSource} />
-          ) : null}
+      {isDeleting ? (
+        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+          <Loader2 className="h-3 w-3 animate-spin text-[#f0b1b1]" />
         </div>
-        <div className="pointer-events-auto">
-          {deleteSource ? <DeleteUploadedAssetButton deleteSource={deleteSource} /> : null}
+      ) : (
+        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[open=true]:opacity-100">
+          <div className="pointer-events-auto">
+            {dimensionSource ? (
+              <AssetDimensionSourceRowButton dimensionSource={dimensionSource} />
+            ) : null}
+          </div>
+          <div className="pointer-events-auto">
+            {deleteSource ? <DeleteUploadedAssetButton deleteSource={deleteSource} /> : null}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -288,8 +297,9 @@ function BulkDeleteAssetsBar({
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
   return (
     <div className="mx-3 mb-2 flex items-center gap-2 border border-white/14 bg-white/[0.04] px-2 py-1.5">
-      <span className="flex-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/68">
-        {count} selected
+      <span className="flex flex-1 items-center gap-1.5 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/68">
+        {isDeleting ? <Loader2 className="h-3 w-3 animate-spin text-white/68" /> : null}
+        {isDeleting ? `Deleting ${count}...` : `${count} selected`}
       </span>
       <PopoverRoot open={confirmOpen} onOpenChange={onConfirmOpenChange}>
         <Tooltip>
