@@ -1,27 +1,33 @@
 import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
 import { getAssetUrl } from "./assets";
-import type { DragGhost, FolderSpriteSource } from "./types";
+import type { DragGhost } from "./types";
 
-export const DND_TYPE_FOLDER_ASSET = "folder-asset";
 export const DND_TYPE_PROJECT_ASSET = "project-asset";
+export const DND_TYPE_UPLOADTHING_ASSET = "uploadthing-asset";
 export const DND_TYPE_SCENE_TAB = "scene-tab";
 export const WORKSPACE_DROP_ZONE_ID = "workspace-dropzone";
 export const SCENE_TABS_GROUP_ID = "scene-tabs";
 
-export type FolderAssetDragData = {
-  kind: typeof DND_TYPE_FOLDER_ASSET;
-  sprite: FolderSpriteSource;
+export type ProjectAssetDragData = {
+  kind: typeof DND_TYPE_PROJECT_ASSET;
+  assetId: string;
   previewUrl: string;
   imageUrl: string;
   previewWidth: number;
   previewHeight: number;
-  naturalWidth?: number;
-  naturalHeight?: number;
+  naturalWidth: number;
+  naturalHeight: number;
 };
 
-export type ProjectAssetDragData = {
-  kind: typeof DND_TYPE_PROJECT_ASSET;
-  assetId: string;
+export type UploadThingAssetDragData = {
+  kind: typeof DND_TYPE_UPLOADTHING_ASSET;
+  file: {
+    key: string;
+    name: string;
+    url: string;
+    width: number;
+    height: number;
+  };
   previewUrl: string;
   imageUrl: string;
   previewWidth: number;
@@ -38,8 +44,8 @@ export type SceneTabDragData = {
   sceneHeight: number;
 };
 
-export type EditorDragData = FolderAssetDragData | ProjectAssetDragData | SceneTabDragData;
-export type AssetDragData = FolderAssetDragData | ProjectAssetDragData;
+export type EditorDragData = ProjectAssetDragData | UploadThingAssetDragData | SceneTabDragData;
+export type AssetDragData = ProjectAssetDragData | UploadThingAssetDragData;
 
 export function getAssetPreviewSize(width: number, height: number) {
   const capHeight =
@@ -67,6 +73,27 @@ export function createProjectAssetDragData(asset: SpriteAsset): ProjectAssetDrag
   };
 }
 
+export function createUploadThingAssetDragData(file: {
+  key: string;
+  name: string;
+  url: string;
+  width: number;
+  height: number;
+}): UploadThingAssetDragData {
+  const preview = getAssetPreviewSize(file.width, file.height);
+
+  return {
+    kind: DND_TYPE_UPLOADTHING_ASSET,
+    file,
+    previewUrl: file.url,
+    imageUrl: file.url,
+    previewWidth: preview.width,
+    previewHeight: preview.height,
+    naturalWidth: file.width,
+    naturalHeight: file.height,
+  };
+}
+
 export function createAssetDragGhost(data: AssetDragData): DragGhost {
   return {
     x: 0,
@@ -83,7 +110,7 @@ export function isAssetDragData(value: unknown): value is AssetDragData {
   }
 
   const kind = (value as { kind?: string }).kind;
-  return kind === DND_TYPE_FOLDER_ASSET || kind === DND_TYPE_PROJECT_ASSET;
+  return kind === DND_TYPE_PROJECT_ASSET || kind === DND_TYPE_UPLOADTHING_ASSET;
 }
 
 export function isSceneTabDragData(value: unknown): value is SceneTabDragData {

@@ -47,7 +47,6 @@ export function createInitialEditorState(restoredState: PersistedEditorState | n
     gridSize: initialUiState.gridSize,
     workspaceScroll: initialUiState.workspaceScroll,
     interaction: null,
-    folderSprites: [],
     dragGhost: null,
     shiftHeld: false,
     persistenceError: null,
@@ -93,9 +92,6 @@ export const editorReducer = produce((draft: EditorState, action: EditorAction) 
       return;
     case "setInteraction":
       draft.interaction = action.interaction;
-      return;
-    case "setFolderSprites":
-      draft.folderSprites = action.folderSprites;
       return;
     case "setDragGhost":
       draft.dragGhost = action.dragGhost;

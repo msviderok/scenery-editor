@@ -48,15 +48,6 @@ export type MarqueeRect = {
   height: number;
 };
 
-export type FolderSpriteSource = {
-  id: string;
-  fileName: string;
-  relativePath: string;
-  sourcePath: string;
-  url: string;
-  mimeType: string;
-};
-
 export type DragGhost = {
   x: number;
   y: number;
@@ -89,7 +80,6 @@ export type PersistedEditorState = {
 export type EditorState = PersistedEditorUiState & {
   project: SpriteProject;
   interaction: Interaction | null;
-  folderSprites: FolderSpriteSource[];
   dragGhost: DragGhost | null;
   shiftHeld: boolean;
   persistenceError: string | null;
@@ -102,7 +92,6 @@ export type EditorMutation = (draft: Draft<EditorState>) => void;
 export type EditorAction =
   | { type: "mutate"; mutate: EditorMutation }
   | { type: "setInteraction"; interaction: Interaction | null }
-  | { type: "setFolderSprites"; folderSprites: FolderSpriteSource[] }
   | { type: "setDragGhost"; dragGhost: DragGhost | null }
   | { type: "setShiftHeld"; shiftHeld: boolean }
   | { type: "setPersistenceError"; persistenceError: string | null }

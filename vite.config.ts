@@ -23,10 +23,7 @@ export default defineConfig({
     tasks: {
       build: {
         command: "vp run -v editor#build",
-        dependsOn: [
-          "@msviderok/sprite-editor-ast-schema#build",
-          "@msviderok/2d-scene-transform-vite-plugin#build",
-        ],
+        dependsOn: ["@msviderok/sprite-editor-ast-schema#build"],
       },
     },
   },

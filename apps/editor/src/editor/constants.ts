@@ -25,9 +25,7 @@ export const SOLID_PERSISTENCE_SLOT_KEYS = [
   "sprite-editor:persistence:slot-1",
 ] as const;
 
-export const SPRITES_MANIFEST_ROUTE = "/__sprite-editor__/sprites.json";
 export const PROJECT_ASSET_MIME = "application/x-sprite-asset";
-export const FOLDER_ASSET_MIME = "application/x-sprite-folder-asset";
 
 export const SCENE_PRESETS = [
   { width: 640, height: 360 },

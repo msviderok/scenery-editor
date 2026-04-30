@@ -22,7 +22,7 @@ function extractBackgroundUrl(value: string | undefined | null): string | null {
 }
 
 export function SceneBackgroundToolbar(props: SceneBackgroundToolbarProps) {
-  const { scene, pan, zoom, selected } = props;
+  const { scene, pan, selected } = props;
   const { mutate, updateScene } = useEditorState();
   const url = extractBackgroundUrl(scene.backgroundStyle.backgroundImage);
 

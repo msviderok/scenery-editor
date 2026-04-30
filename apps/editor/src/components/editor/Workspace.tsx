@@ -8,8 +8,8 @@ import {
   TRACKPAD_PINCH_ZOOM_SENSITIVITY,
 } from "@/editor/constants";
 import {
-  DND_TYPE_FOLDER_ASSET,
   DND_TYPE_PROJECT_ASSET,
+  DND_TYPE_UPLOADTHING_ASSET,
   WORKSPACE_DROP_ZONE_ID,
   createAssetDragGhost,
   isAssetDragData,
@@ -38,7 +38,6 @@ type WorkspaceProps = {
   selectors: EditorSelectors;
   selectedAsset: SpriteAsset | null;
   workspaceRef: React.RefObject<HTMLDivElement | null>;
-  folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
   mutate: (mutation: (draft: EditorState) => void) => void;
   dispatch: EditorDispatch;
   updateNode: (nodeId: string, updater: (node: SpriteNode) => void) => void;
@@ -67,7 +66,6 @@ export function Workspace(props: WorkspaceProps) {
     selectors,
     selectedAsset,
     workspaceRef,
-    folderSpriteSizeCacheRef,
     mutate,
     dispatch,
     updateNode,
@@ -81,7 +79,7 @@ export function Workspace(props: WorkspaceProps) {
   const zoom = state.viewportScale;
   const { ref: workspaceDropRef, isDropTarget } = useDroppable({
     id: WORKSPACE_DROP_ZONE_ID,
-    accept: [DND_TYPE_FOLDER_ASSET, DND_TYPE_PROJECT_ASSET],
+    accept: [DND_TYPE_PROJECT_ASSET, DND_TYPE_UPLOADTHING_ASSET],
   });
 
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
@@ -309,7 +307,7 @@ export function Workspace(props: WorkspaceProps) {
     }
 
     const existing = Object.values(state.project.assets).find(
-      (asset) => asset.sourcePath && asset.sourcePath === dragData.sprite.sourcePath,
+      (asset) => asset.url === dragData.file.url,
     );
 
     if (existing) {
@@ -320,20 +318,16 @@ export function Workspace(props: WorkspaceProps) {
     const size =
       dragData.naturalWidth && dragData.naturalHeight
         ? { width: dragData.naturalWidth, height: dragData.naturalHeight }
-        : (folderSpriteSizeCacheRef.current.get(dragData.sprite.url) ??
-          (await readImageSize(dragData.sprite.url)));
-
-    folderSpriteSizeCacheRef.current.set(dragData.sprite.url, size);
+        : await readImageSize(dragData.file.url);
 
     const nextAsset: SpriteAsset = {
       id: nextId("asset", Object.keys(state.project.assets)),
       kind: "image",
-      fileName: dragData.sprite.fileName,
+      fileName: dragData.file.name,
       width: size.width,
       height: size.height,
-      mimeType: dragData.sprite.mimeType,
-      sourcePath: dragData.sprite.sourcePath,
-      url: dragData.sprite.url,
+      mimeType: "image/*",
+      url: dragData.file.url,
     };
 
     mutate((draft) => {

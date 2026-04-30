@@ -36,7 +36,7 @@ Keep this section current when architecture, data model, persistence, or editor 
 - Use Vite+ commands only; do not call `pnpm`, `npm`, or `yarn` directly for repo workflows.
 - The editor uses React, Zustand vanilla stores, and Immer. `useEditorState.ts` owns the singleton editor store, reducer dispatch, mutation helper, and derived selectors.
 - `useEditorEffects.ts` owns side effects:
-  - fetches the folder sprite manifest from `/__sprite-editor__/sprites.json`
+  - fetches the UploadThing asset list from `/api/uploadthing/files`
   - refreshes folder sprite metadata on a 2.5s interval
   - restores workspace scroll after load
   - autosaves editor state to `localStorage`
@@ -68,9 +68,9 @@ Keep this section current when architecture, data model, persistence, or editor 
 
 ### Assets, import/export, and persistence
 
-- The `sprites/` folder is exposed to the app through TanStack Start server routes rooted at `/__sprite-editor__/sprites.json` and `/__sprite-editor__/sprites/*`.
-- Dragging a folder sprite into the workspace lazily creates a project asset if one with the same `sourcePath` does not already exist.
-- Uploading images reads them as data URLs and records their natural dimensions before inserting them into `project.assets`.
+- UploadThing storage is exposed to the app through the TanStack Start server route at `/api/uploadthing/files`.
+- Dragging an UploadThing asset into the workspace lazily creates a project asset if one with the same `url` does not already exist.
+- Uploading images sends them to UploadThing, records their natural dimensions, and inserts URL-backed assets into `project.assets`.
 - Export uses `buildEmbeddedExportProject()` and `serializeEmbeddedProject()` so every asset is embedded as a data URL in the exported JSON.
 - Import parses the JSON through `parseSpriteProject()` and resets selection plus editor UI state that depends on the previous project.
 - Custom AST preview also lives in `apps/editor` through the `/preview/imported` route, which previews the imported project's first scene without mutating editor state or autosave.

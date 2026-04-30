@@ -1,15 +1,13 @@
 import type * as React from "react";
 import { useEffect } from "react";
-import { AUTOSAVE_DELAY_MS, SPRITES_MANIFEST_ROUTE } from "./constants";
-import { readImageSize } from "./assets";
+import { AUTOSAVE_DELAY_MS } from "./constants";
 import { createPersistedPayload, writePersistedPayload } from "./persistence";
-import type { EditorDispatch, EditorState, FolderSpriteSource } from "./types";
+import type { EditorDispatch, EditorState } from "./types";
 
 type EditorEffectsOptions = {
   state: EditorState;
   dispatch: EditorDispatch;
   workspaceRef: React.RefObject<HTMLDivElement | null>;
-  folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
   autosaveTimerRef: React.MutableRefObject<number | null>;
   pendingPersistencePayloadRef: React.MutableRefObject<string | null>;
   nextPersistenceSlotRef: React.MutableRefObject<0 | 1>;
@@ -21,55 +19,11 @@ export function useEditorEffects(options: EditorEffectsOptions) {
     state,
     dispatch,
     workspaceRef,
-    folderSpriteSizeCacheRef,
     autosaveTimerRef,
     pendingPersistencePayloadRef,
     nextPersistenceSlotRef,
     restoredWorkspaceScrollRef,
   } = options;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchFolderSprites = async () => {
-      try {
-        const response = await fetch(SPRITES_MANIFEST_ROUTE, { cache: "no-store" });
-        if (!response.ok) {
-          if (!cancelled) {
-            dispatch({ type: "setFolderSprites", folderSprites: [] });
-          }
-          return;
-        }
-
-        const sprites = (await response.json()) as FolderSpriteSource[];
-        if (cancelled) return;
-        dispatch({ type: "setFolderSprites", folderSprites: sprites });
-
-        for (const sprite of sprites) {
-          if (folderSpriteSizeCacheRef.current.has(sprite.url)) continue;
-          void readImageSize(sprite.url)
-            .then((size) => {
-              folderSpriteSizeCacheRef.current.set(sprite.url, size);
-            })
-            .catch(() => {});
-        }
-      } catch {
-        if (!cancelled) {
-          dispatch({ type: "setFolderSprites", folderSprites: [] });
-        }
-      }
-    };
-
-    void fetchFolderSprites();
-    const timer = window.setInterval(() => {
-      void fetchFolderSprites();
-    }, 2500);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [dispatch, folderSpriteSizeCacheRef]);
 
   useEffect(() => {
     const workspace = workspaceRef.current;

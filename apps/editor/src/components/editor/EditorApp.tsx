@@ -7,33 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
-import {
-  buildEmbeddedExportProject,
-  readFileAsDataUrl,
-  readImageSize,
-  serializeEmbeddedProject,
-} from "@/editor/assets";
-import {
-  DEFAULT_VIEWPORT_SCALE,
-  GRID_SIZE_BREAKPOINTS,
-  SPRITES_MANIFEST_ROUTE,
-} from "@/editor/constants";
+import { buildEmbeddedExportProject, serializeEmbeddedProject } from "@/editor/assets";
+import { DEFAULT_VIEWPORT_SCALE, GRID_SIZE_BREAKPOINTS } from "@/editor/constants";
 import { isAssetDragData, isSceneTabDragData, type EditorDragData } from "@/editor/dnd";
 import { nextId, swapAtIndex } from "@/editor/geometry";
 import { getNextPersistenceSlot } from "@/editor/persistence";
 import { useEditorEffects } from "@/editor/useEditorEffects";
 import { useEditorState } from "@/editor/useEditorState";
+import { useUploadThingAssets } from "@/editor/useUploadThingAssets";
 import { readSpriteProjectFromFile } from "@/lib/readSpriteProjectFromFile";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { createDefaultScene, type SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
+import { createDefaultScene } from "@msviderok/sprite-editor-ast-schema";
 import { Grid3x3, Play } from "lucide-react";
 import { PreviewOverlay } from "@/components/preview/PreviewOverlay";
 
 export function EditorApp() {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const previewAstInputRef = useRef<HTMLInputElement>(null);
-  const folderSpriteSizeCacheRef = useRef(new Map<string, { width: number; height: number }>());
   const autosaveTimerRef = useRef<number | null>(null);
   const pendingPersistencePayloadRef = useRef<string | null>(null);
   const nextPersistenceSlotRef = useRef<0 | 1>(getNextPersistenceSlot());
@@ -45,6 +36,7 @@ export function EditorApp() {
   const [previewAstError, setPreviewAstError] = useState<string | null>(null);
 
   const { state, dispatch, mutate, updateScene, updateNode, selectors } = useEditorState();
+  const uploadThingAssets = useUploadThingAssets();
   const gridSizeBreakpoints: readonly number[] = GRID_SIZE_BREAKPOINTS;
   const gridSizeStepIndex = Math.max(0, gridSizeBreakpoints.indexOf(state.gridSize));
 
@@ -52,31 +44,11 @@ export function EditorApp() {
     state,
     dispatch,
     workspaceRef,
-    folderSpriteSizeCacheRef,
     autosaveTimerRef,
     pendingPersistencePayloadRef,
     nextPersistenceSlotRef,
     restoredWorkspaceScrollRef,
   });
-
-  const refreshFolderSprites = async () => {
-    const response = await fetch(SPRITES_MANIFEST_ROUTE, { cache: "no-store" });
-    if (!response.ok) {
-      dispatch({ type: "setFolderSprites", folderSprites: [] });
-      return;
-    }
-
-    const sprites = (await response.json()) as typeof state.folderSprites;
-    dispatch({ type: "setFolderSprites", folderSprites: sprites });
-    for (const sprite of sprites) {
-      if (folderSpriteSizeCacheRef.current.has(sprite.url)) continue;
-      void readImageSize(sprite.url)
-        .then((size) => {
-          folderSpriteSizeCacheRef.current.set(sprite.url, size);
-        })
-        .catch(() => {});
-    }
-  };
 
   const handleExport = async () => {
     const embeddedProject = await buildEmbeddedExportProject(state.project);
@@ -124,33 +96,8 @@ export function EditorApp() {
     }
   };
 
-  const handleUploadImages = async (files: FileList | null) => {
-    if (!files?.length) return;
-
-    const entries = await Promise.all(
-      [...files]
-        .filter((file) => file.type.startsWith("image/"))
-        .map(async (file) => {
-          const dataUrl = await readFileAsDataUrl(file);
-          const size = await readImageSize(dataUrl);
-          return {
-            id: nextId("asset", Object.keys(state.project.assets)),
-            kind: "image" as const,
-            fileName: file.name,
-            width: size.width,
-            height: size.height,
-            mimeType: file.type,
-            dataUrl,
-          };
-        }),
-    );
-
-    mutate((draft) => {
-      for (const asset of entries) {
-        const uniqueId = nextId("asset", Object.keys(draft.project.assets));
-        draft.project.assets[uniqueId] = { ...asset, id: uniqueId };
-      }
-    });
+  const handleUploadComplete = async () => {
+    await uploadThingAssets.refresh();
   };
 
   const handleDeleteSelected = () => {
@@ -249,15 +196,10 @@ export function EditorApp() {
     });
   };
 
-  const projectAssets = Object.values(state.project.assets).sort((left, right) =>
-    left.fileName.localeCompare(right.fileName),
-  );
-  const projectAssetsBySourcePath = new Map<string, SpriteAsset>(
-    projectAssets
-      .filter((asset): asset is SpriteAsset & { sourcePath: string } => Boolean(asset.sourcePath))
-      .map((asset) => [asset.sourcePath!, asset]),
-  );
-
+  const currentSceneAssetIds = new Set(selectors.selectedScene.nodes.map((node) => node.assetId));
+  const projectAssets = Object.values(state.project.assets)
+    .filter((asset) => currentSceneAssetIds.has(asset.id))
+    .sort((left, right) => left.fileName.localeCompare(right.fileName));
   const selectedAsset = selectors.singleSelectedNode
     ? (state.project.assets[selectors.singleSelectedNode.assetId] ?? null)
     : null;
@@ -467,12 +409,13 @@ export function EditorApp() {
               </div>
 
               <AssetsPanel
-                folderSprites={state.folderSprites}
+                uploadThingAssets={uploadThingAssets.assets}
+                uploadThingLoading={uploadThingAssets.loading}
+                uploadThingError={uploadThingAssets.error}
                 projectAssets={projectAssets}
-                projectAssetsBySourcePath={projectAssetsBySourcePath}
-                folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-                onRefresh={() => void refreshFolderSprites()}
-                onUploadFiles={(files) => void handleUploadImages(files)}
+                onUploadComplete={() => void handleUploadComplete()}
+                onDeleteUploadThingAsset={(key) => void uploadThingAssets.deleteAsset(key)}
+                deletingUploadThingAssetKeys={uploadThingAssets.deletingKeys}
               />
 
               <ScenesPanel
@@ -489,7 +432,6 @@ export function EditorApp() {
               selectors={selectors}
               selectedAsset={selectedAsset}
               workspaceRef={workspaceRef}
-              folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
               mutate={mutate}
               dispatch={dispatch}
               updateNode={updateNode}

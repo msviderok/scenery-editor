@@ -1,161 +1,52 @@
-import {
-  ChevronRight,
-  ChevronsDownUp,
-  ChevronsUpDown,
-  Ratio,
-  RefreshCw,
-  Search,
-  Upload,
-  X,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Ratio, Search, Trash2, Upload, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useDraggable } from "@dnd-kit/react";
 import type { SpriteAsset } from "@msviderok/sprite-editor-ast-schema";
-import { getAssetUrl, readImageSize } from "@/editor/assets";
+import { getAssetUrl } from "@/editor/assets";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { PopoverContent, PopoverRoot, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { UploadButton } from "@/lib/uploadthing";
 import { AssetDimensionSourcePopoverContent } from "./AssetDimensionSourcePopover";
 import {
-  DND_TYPE_FOLDER_ASSET,
+  DND_TYPE_PROJECT_ASSET,
   createProjectAssetDragData,
-  getAssetPreviewSize,
+  createUploadThingAssetDragData,
   type AssetDragData,
-  type FolderAssetDragData,
 } from "@/editor/dnd";
-import type { FolderSpriteSource } from "@/editor/types";
+import type { UploadThingAsset } from "@/editor/useUploadThingAssets";
+import { cn } from "@/lib/utils";
 
 type AssetsPanelProps = {
-  folderSprites: FolderSpriteSource[];
+  uploadThingAssets: UploadThingAsset[];
+  uploadThingLoading: boolean;
+  uploadThingError: string | null;
   projectAssets: SpriteAsset[];
-  projectAssetsBySourcePath: Map<string, SpriteAsset>;
-  folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
-  onRefresh: () => void;
-  onUploadFiles: (files: FileList | null) => void;
+  onUploadComplete: () => void;
+  onDeleteUploadThingAsset: (key: string) => void;
+  deletingUploadThingAssetKeys: Set<string>;
 };
-
-type TreeFolder = {
-  kind: "folder";
-  /** Full path key, unique. e.g. "posters/old" */
-  path: string;
-  label: string;
-  children: TreeNode[];
-};
-
-type TreeFile = {
-  kind: "file";
-  path: string;
-  sprite: FolderSpriteSource;
-};
-
-type TreeNode = TreeFolder | TreeFile;
-
-function buildTree(sprites: FolderSpriteSource[]): TreeFolder {
-  const root: TreeFolder = { kind: "folder", path: "", label: "Sprites", children: [] };
-
-  const ensureFolder = (segments: string[]): TreeFolder => {
-    let current = root;
-    let pathAccum = "";
-    for (const segment of segments) {
-      pathAccum = pathAccum ? `${pathAccum}/${segment}` : segment;
-      let child = current.children.find(
-        (node): node is TreeFolder => node.kind === "folder" && node.label === segment,
-      );
-      if (!child) {
-        child = {
-          kind: "folder",
-          path: pathAccum,
-          label: segment,
-          children: [],
-        };
-        current.children.push(child);
-      }
-      current = child;
-    }
-    return current;
-  };
-
-  for (const sprite of sprites) {
-    const segments = sprite.relativePath.split("/").filter(Boolean);
-    const folderSegments = segments.slice(0, -1);
-    const folder = ensureFolder(folderSegments);
-    folder.children.push({
-      kind: "file",
-      path: sprite.relativePath,
-      sprite,
-    });
-  }
-
-  const sortNode = (node: TreeFolder) => {
-    node.children.sort((left, right) => {
-      if (left.kind !== right.kind) return left.kind === "folder" ? -1 : 1;
-      const leftLabel = left.kind === "folder" ? left.label : left.sprite.fileName;
-      const rightLabel = right.kind === "folder" ? right.label : right.sprite.fileName;
-      return leftLabel.localeCompare(rightLabel);
-    });
-    for (const child of node.children) {
-      if (child.kind === "folder") sortNode(child);
-    }
-  };
-  sortNode(root);
-
-  return root;
-}
-
-function collectFolderPaths(node: TreeFolder, acc: string[] = []): string[] {
-  acc.push(node.path);
-  for (const child of node.children) {
-    if (child.kind === "folder") collectFolderPaths(child, acc);
-  }
-  return acc;
-}
-
-function countFiles(node: TreeFolder): number {
-  let total = 0;
-  for (const child of node.children) {
-    if (child.kind === "file") total += 1;
-    else total += countFiles(child);
-  }
-  return total;
-}
-
-function FolderHeader(props: {
-  label: string;
-  count: number;
-  open: boolean;
-  depth: number;
-  onToggle: () => void;
-}) {
-  const { label, count, open, depth, onToggle } = props;
-  return (
-    <Button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-center gap-1.5 py-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/38 transition-colors hover:text-white/68"
-      style={{ paddingLeft: `${12 + depth * 12}px`, paddingRight: "12px" }}
-    >
-      <ChevronRight className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`} />
-      <span className="flex-1 truncate text-left">{label}</span>
-      <span className="font-mono text-[10px] text-white/28">{count}</span>
-    </Button>
-  );
-}
 
 function AssetRow(props: {
   label: string;
   previewUrl: string;
   dragData: AssetDragData;
   depth: number;
-  /** When set, the row exposes a dimension-source action. */
   dimensionSource?: { url: string; width: number; height: number };
+  deleteSource?: {
+    key: string;
+    name: string;
+    isDeleting: boolean;
+    onDelete: (key: string) => void;
+  };
 }) {
-  const { label, previewUrl, dragData, depth, dimensionSource } = props;
+  const { label, previewUrl, dragData, depth, dimensionSource, deleteSource } = props;
   const { ref, isDragging } = useDraggable({
     id:
-      dragData.kind === DND_TYPE_FOLDER_ASSET
-        ? `folder-asset:${dragData.sprite.id}`
-        : `project-asset:${dragData.assetId}`,
+      dragData.kind === DND_TYPE_PROJECT_ASSET
+        ? `project-asset:${dragData.assetId}`
+        : `uploadthing-asset:${dragData.file.key}`,
     type: dragData.kind,
     data: dragData,
   });
@@ -169,7 +60,12 @@ function AssetRow(props: {
       }`}
       style={{
         paddingLeft: `${16 + depth * 12}px`,
-        paddingRight: dimensionSource ? "44px" : "16px",
+        paddingRight:
+          dimensionSource && deleteSource
+            ? "76px"
+            : dimensionSource || deleteSource
+              ? "44px"
+              : "16px",
       }}
     >
       <span className="pointer-events-none grid h-5 w-5 shrink-0 place-items-center overflow-hidden border border-white/12 bg-white/[0.03]">
@@ -205,14 +101,19 @@ function AssetRow(props: {
     button
   );
 
-  if (!dimensionSource) return trigger;
+  if (!dimensionSource && !deleteSource) return trigger;
 
   return (
     <div className="group relative flex w-full items-center">
       {trigger}
-      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[open=true]:opacity-100">
+      <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[open=true]:opacity-100">
         <div className="pointer-events-auto">
-          <AssetDimensionSourceRowButton dimensionSource={dimensionSource} />
+          {dimensionSource ? (
+            <AssetDimensionSourceRowButton dimensionSource={dimensionSource} />
+          ) : null}
+        </div>
+        <div className="pointer-events-auto">
+          {deleteSource ? <DeleteUploadedAssetButton deleteSource={deleteSource} /> : null}
         </div>
       </div>
     </div>
@@ -271,202 +172,127 @@ function AssetDimensionSourceRowButton({
   );
 }
 
-function FolderAssetRow(props: {
-  sprite: FolderSpriteSource;
-  existingAsset: SpriteAsset | undefined;
-  folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
-  depth: number;
+function DeleteUploadedAssetButton({
+  deleteSource,
+}: {
+  deleteSource: { key: string; name: string; isDeleting: boolean; onDelete: (key: string) => void };
 }) {
-  const { sprite, existingAsset, folderSpriteSizeCacheRef, depth } = props;
-  const [measuredSize, setMeasuredSize] = useState<{ width: number; height: number } | null>(() =>
-    existingAsset
-      ? { width: existingAsset.width, height: existingAsset.height }
-      : (folderSpriteSizeCacheRef.current.get(sprite.url) ?? null),
-  );
-
-  useEffect(() => {
-    if (existingAsset) {
-      setMeasuredSize({ width: existingAsset.width, height: existingAsset.height });
-      return;
-    }
-
-    const cached = folderSpriteSizeCacheRef.current.get(sprite.url);
-    if (cached) {
-      setMeasuredSize(cached);
-      return;
-    }
-
-    let cancelled = false;
-
-    void readImageSize(sprite.url)
-      .then((size) => {
-        folderSpriteSizeCacheRef.current.set(sprite.url, size);
-        if (!cancelled) {
-          setMeasuredSize(size);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [existingAsset, folderSpriteSizeCacheRef, sprite.url]);
-
-  const naturalWidth = measuredSize?.width ?? 64;
-  const naturalHeight = measuredSize?.height ?? 64;
-  const preview = getAssetPreviewSize(naturalWidth, naturalHeight);
-
-  const dragData: FolderAssetDragData = {
-    kind: DND_TYPE_FOLDER_ASSET,
-    sprite,
-    previewUrl: sprite.url,
-    imageUrl: sprite.url,
-    previewWidth: preview.width,
-    previewHeight: preview.height,
-    naturalWidth: measuredSize?.width,
-    naturalHeight: measuredSize?.height,
-  };
-
-  const dimensionSource = measuredSize
-    ? { url: sprite.url, width: measuredSize.width, height: measuredSize.height }
-    : undefined;
+  const [open, setOpen] = useState(false);
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
 
   return (
-    <AssetRow
-      label={sprite.fileName}
-      previewUrl={sprite.url}
-      dragData={dragData}
-      depth={depth}
-      dimensionSource={dimensionSource}
-    />
+    <PopoverRoot open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="iconButton"
+                  className="h-6 w-6 text-white/48 hover:text-[#f0b1b1]"
+                  disabled={deleteSource.isDeleting}
+                  onPointerDown={stop}
+                  onMouseDown={stop}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent>Delete from UploadThing</TooltipContent>
+      </Tooltip>
+
+      <PopoverContent
+        side="right"
+        sideOffset={8}
+        align="center"
+        className="w-64 border-white/14 bg-[#1a1a1a] p-3 text-foreground"
+        onPointerDown={stop}
+        onMouseDown={stop}
+      >
+        <div className="space-y-3">
+          <div>
+            <div className="font-[var(--font-ui)] text-[12px] font-bold text-white/86">
+              Delete uploaded asset?
+            </div>
+            <div className="mt-1 font-mono text-[10px] leading-4 text-white/44">
+              This permanently removes {deleteSource.name} from UploadThing storage.
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="muted"
+              size="compact"
+              onClick={() => setOpen(false)}
+              disabled={deleteSource.isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="compact"
+              className="border-[#e76464]/60 bg-[#2a1515] text-[#f0b1b1] hover:border-[#e76464]"
+              disabled={deleteSource.isDeleting}
+              onClick={() => {
+                deleteSource.onDelete(deleteSource.key);
+                setOpen(false);
+              }}
+            >
+              {deleteSource.isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </PopoverRoot>
   );
 }
 
-function TreeFolderView(props: {
-  folder: TreeFolder;
-  depth: number;
-  openFolders: Record<string, boolean>;
-  onToggle: (path: string) => void;
-  projectAssetsBySourcePath: Map<string, SpriteAsset>;
-  folderSpriteSizeCacheRef: React.MutableRefObject<Map<string, { width: number; height: number }>>;
-}) {
-  const {
-    folder,
-    depth,
-    openFolders,
-    onToggle,
-    projectAssetsBySourcePath,
-    folderSpriteSizeCacheRef,
-  } = props;
-  const open = openFolders[folder.path] ?? true;
-  const count = countFiles(folder);
-
+function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div>
-      <FolderHeader
-        label={folder.label || "Sprites"}
-        count={count}
-        open={open}
-        depth={depth}
-        onToggle={() => onToggle(folder.path)}
-      />
-      {open ? (
-        <div className="flex flex-col">
-          {folder.children.map((child) =>
-            child.kind === "folder" ? (
-              <TreeFolderView
-                key={`folder:${child.path}`}
-                folder={child}
-                depth={depth + 1}
-                openFolders={openFolders}
-                onToggle={onToggle}
-                projectAssetsBySourcePath={projectAssetsBySourcePath}
-                folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-              />
-            ) : (
-              <FolderAssetRow
-                key={`file:${child.sprite.id}`}
-                sprite={child.sprite}
-                existingAsset={projectAssetsBySourcePath.get(child.sprite.sourcePath)}
-                folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-                depth={depth + 1}
-              />
-            ),
-          )}
-        </div>
-      ) : null}
+    <div className="flex items-center gap-1.5 px-3 py-1 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/38">
+      <span className="flex-1 truncate">{label}</span>
+      <span className="font-mono text-[10px] text-white/28">{count}</span>
     </div>
   );
 }
 
-const IN_PROJECT_KEY = "__in-project__";
-
 export function AssetsPanel(props: AssetsPanelProps) {
   const {
-    folderSprites,
+    uploadThingAssets,
+    uploadThingLoading,
+    uploadThingError,
     projectAssets,
-    projectAssetsBySourcePath,
-    folderSpriteSizeCacheRef,
-    onRefresh,
-    onUploadFiles,
+    onUploadComplete,
+    onDeleteUploadThingAsset,
+    deletingUploadThingAssetKeys,
   } = props;
 
-  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim().toLowerCase();
   const isSearching = trimmedSearch.length > 0;
 
-  const filteredFolderSprites = useMemo(() => {
-    if (!isSearching) return folderSprites;
-    return folderSprites.filter(
-      (sprite) =>
-        sprite.fileName.toLowerCase().includes(trimmedSearch) ||
-        sprite.relativePath.toLowerCase().includes(trimmedSearch),
-    );
-  }, [folderSprites, isSearching, trimmedSearch]);
+  const projectAssetUrls = useMemo(
+    () => new Set(projectAssets.map((asset) => asset.url).filter(Boolean)),
+    [projectAssets],
+  );
+
+  const filteredUploadThingAssets = useMemo(() => {
+    const assets = uploadThingAssets.filter((asset) => !projectAssetUrls.has(asset.url));
+    if (!isSearching) return assets;
+    return assets.filter((asset) => asset.name.toLowerCase().includes(trimmedSearch));
+  }, [isSearching, projectAssetUrls, trimmedSearch, uploadThingAssets]);
 
   const filteredProjectAssets = useMemo(() => {
     if (!isSearching) return projectAssets;
     return projectAssets.filter((asset) => asset.fileName.toLowerCase().includes(trimmedSearch));
   }, [projectAssets, isSearching, trimmedSearch]);
-
-  const tree = useMemo(() => buildTree(filteredFolderSprites), [filteredFolderSprites]);
-
-  const allFolderPaths = useMemo(() => {
-    const paths = collectFolderPaths(tree);
-    if (filteredProjectAssets.length) paths.push(IN_PROJECT_KEY);
-    return paths;
-  }, [tree, filteredProjectAssets.length]);
-
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>(() => ({}));
-
-  // Default new folders to open. While searching, force-expand all folders
-  // so matches are visible.
-  const resolvedOpen = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    for (const path of allFolderPaths) {
-      map[path] = isSearching ? true : (openFolders[path] ?? true);
-    }
-    return map;
-  }, [allFolderPaths, openFolders, isSearching]);
-
-  const allOpen = allFolderPaths.every((path) => resolvedOpen[path]);
-  const allClosed = allFolderPaths.every((path) => !resolvedOpen[path]);
-
-  const setAll = (open: boolean) => {
-    const map: Record<string, boolean> = {};
-    for (const path of allFolderPaths) map[path] = open;
-    setOpenFolders(map);
-  };
-
-  const toggleFolder = (path: string) => {
-    setOpenFolders((current) => ({
-      ...current,
-      [path]: !(current[path] ?? resolvedOpen[path] ?? true),
-    }));
-  };
-
-  const inProjectOpen = resolvedOpen[IN_PROJECT_KEY] ?? true;
 
   return (
     <>
@@ -474,70 +300,30 @@ export function AssetsPanel(props: AssetsPanelProps) {
         <span className="font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/42">
           Assets
         </span>
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="iconButton"
-                  type="button"
-                  disabled={allOpen}
-                  onClick={() => setAll(true)}
-                >
-                  <ChevronsUpDown className="h-3 w-3" />
-                </Button>
-              }
-            />
-            <TooltipContent>Expand all</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="iconButton"
-                  type="button"
-                  disabled={allClosed}
-                  onClick={() => setAll(false)}
-                >
-                  <ChevronsDownUp className="h-3 w-3" />
-                </Button>
-              }
-            />
-            <TooltipContent>Collapse all</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant="iconButton" type="button" onClick={onRefresh}>
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-              }
-            />
-            <TooltipContent>Refresh sprite folder</TooltipContent>
-          </Tooltip>
-          <input
-            ref={uploadInputRef}
-            hidden
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(event) => {
-              onUploadFiles(event.currentTarget.files);
-              event.currentTarget.value = "";
-            }}
-          />
-        </div>
       </div>
 
       <div className="shrink-0 border-b border-white/10 px-3 py-2">
-        <Button
-          type="button"
-          className="flex w-full items-center justify-center gap-2 border border-dashed border-white/12 px-3 py-2.5 font-[var(--font-ui)] text-[11px] font-semibold text-white/40 transition-colors hover:border-[var(--accent)]/50 hover:text-white/78"
-          onClick={() => uploadInputRef.current?.click()}
-        >
-          <Upload className="h-3.5 w-3.5" />
-          Upload images
-        </Button>
+        <UploadButton
+          config={{ cn: cn }}
+          endpoint="imageUploader"
+          onClientUploadComplete={onUploadComplete}
+          appearance={{
+            container: "w-full",
+            button:
+              "ut-ready:bg-transparent ut-uploading:bg-transparent after:bg-accent flex w-full items-center justify-center gap-2 border border-dashed border-white/12 bg-transparent px-3 py-2.5 font-[var(--font-ui)] text-[11px] font-semibold text-white/40 transition-colors hover:border-[var(--accent)]/50 hover:text-white/78",
+            allowedContent: "hidden",
+          }}
+          content={{
+            button({ isUploading }) {
+              return (
+                <>
+                  <Upload className="h-3.5 w-3.5" />
+                  {isUploading ? "Uploading..." : "Upload images"}
+                </>
+              );
+            },
+          }}
+        />
       </div>
 
       <div className="relative shrink-0 border-b border-white/10 px-3 py-2">
@@ -545,7 +331,7 @@ export function AssetsPanel(props: AssetsPanelProps) {
         <input
           type="text"
           value={search}
-          placeholder="Search assets…"
+          placeholder="Search assets..."
           onChange={(event) => setSearch(event.currentTarget.value)}
           className="h-7 w-full border border-white/14 bg-white/[0.03] pl-6 pr-7 font-mono text-[11px] text-[var(--foreground)] outline-none focus:border-[var(--accent)] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
         />
@@ -568,56 +354,62 @@ export function AssetsPanel(props: AssetsPanelProps) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto py-2 [scrollbar-width:thin]">
-        {filteredProjectAssets.length ? (
-          <div>
-            <FolderHeader
-              label="In Project"
-              count={filteredProjectAssets.length}
-              open={inProjectOpen}
-              depth={0}
-              onToggle={() => toggleFolder(IN_PROJECT_KEY)}
-            />
-
-            {inProjectOpen ? (
-              <div className="flex flex-col">
-                {filteredProjectAssets.map((asset) => {
-                  const url = getAssetUrl(asset);
-                  return (
-                    <AssetRow
-                      key={asset.id}
-                      label={asset.fileName}
-                      previewUrl={url}
-                      dragData={createProjectAssetDragData(asset)}
-                      depth={1}
-                      dimensionSource={
-                        url ? { url, width: asset.width, height: asset.height } : undefined
-                      }
-                    />
-                  );
-                })}
-              </div>
-            ) : null}
+        {uploadThingError ? (
+          <div className="mx-3 mb-2 border border-[#e76464]/50 bg-[#281313] px-3 py-2 font-mono text-[10px] text-[#f0b1b1]">
+            {uploadThingError}
           </div>
         ) : null}
 
-        {filteredFolderSprites.length ? (
-          <TreeFolderView
-            folder={tree}
-            depth={0}
-            openFolders={resolvedOpen}
-            onToggle={toggleFolder}
-            projectAssetsBySourcePath={projectAssetsBySourcePath}
-            folderSpriteSizeCacheRef={folderSpriteSizeCacheRef}
-          />
+        {filteredProjectAssets.length ? (
+          <div>
+            <SectionHeader label="In Project" count={filteredProjectAssets.length} />
+            <div className="flex flex-col">
+              {filteredProjectAssets.map((asset) => {
+                const url = getAssetUrl(asset);
+                return (
+                  <AssetRow
+                    key={asset.id}
+                    label={asset.fileName}
+                    previewUrl={url}
+                    dragData={createProjectAssetDragData(asset)}
+                    depth={1}
+                    dimensionSource={
+                      url ? { url, width: asset.width, height: asset.height } : undefined
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
         ) : null}
 
-        {!filteredFolderSprites.length && !filteredProjectAssets.length ? (
+        {filteredUploadThingAssets.length ? (
+          <div>
+            <SectionHeader label="Assets" count={filteredUploadThingAssets.length} />
+            <div className="flex flex-col">
+              {filteredUploadThingAssets.map((asset) => (
+                <AssetRow
+                  key={asset.key}
+                  label={asset.name}
+                  previewUrl={asset.url}
+                  dragData={createUploadThingAssetDragData(asset)}
+                  depth={1}
+                  dimensionSource={{ url: asset.url, width: asset.width, height: asset.height }}
+                  deleteSource={{
+                    key: asset.key,
+                    name: asset.name,
+                    isDeleting: deletingUploadThingAssetKeys.has(asset.key),
+                    onDelete: onDeleteUploadThingAsset,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {!filteredUploadThingAssets.length && !filteredProjectAssets.length ? (
           <div className="mx-3 mt-1 border border-dashed border-white/12 px-3 py-4 text-center text-[11px] text-white/28">
-            {isSearching
-              ? "No matches."
-              : !folderSprites.length && !projectAssets.length
-                ? "No sprites yet."
-                : "No assets."}
+            {uploadThingLoading ? "Loading assets..." : isSearching ? "No matches." : "No assets."}
           </div>
         ) : null}
       </div>

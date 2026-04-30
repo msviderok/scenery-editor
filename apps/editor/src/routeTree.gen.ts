@@ -12,8 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PreviewImportedRouteImport } from './routes/preview/imported'
 import { Route as ApiUploadthingRouteImport } from './routes/api/uploadthing'
-import { Route as Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRouteImport } from './routes/[__sprite-editor__]/sprites[.]json'
-import { Route as Char91__spriteEditor__Char93SpritesSplatRouteImport } from './routes/[__sprite-editor__]/sprites/$'
+import { Route as ApiUploadthingFilesRouteImport } from './routes/api/uploadthing/files'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,71 +29,52 @@ const ApiUploadthingRoute = ApiUploadthingRouteImport.update({
   path: '/api/uploadthing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute =
-  Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRouteImport.update({
-    id: '/__sprite-editor__/sprites.json',
-    path: '/__sprite-editor__/sprites.json',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91__spriteEditor__Char93SpritesSplatRoute =
-  Char91__spriteEditor__Char93SpritesSplatRouteImport.update({
-    id: '/__sprite-editor__/sprites/$',
-    path: '/__sprite-editor__/sprites/$',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiUploadthingFilesRoute = ApiUploadthingFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => ApiUploadthingRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/__sprite-editor__/sprites.json': typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
-  '/api/uploadthing': typeof ApiUploadthingRoute
+  '/api/uploadthing': typeof ApiUploadthingRouteWithChildren
   '/preview/imported': typeof PreviewImportedRoute
-  '/__sprite-editor__/sprites/$': typeof Char91__spriteEditor__Char93SpritesSplatRoute
+  '/api/uploadthing/files': typeof ApiUploadthingFilesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/__sprite-editor__/sprites.json': typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
-  '/api/uploadthing': typeof ApiUploadthingRoute
+  '/api/uploadthing': typeof ApiUploadthingRouteWithChildren
   '/preview/imported': typeof PreviewImportedRoute
-  '/__sprite-editor__/sprites/$': typeof Char91__spriteEditor__Char93SpritesSplatRoute
+  '/api/uploadthing/files': typeof ApiUploadthingFilesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/__sprite-editor__/sprites.json': typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
-  '/api/uploadthing': typeof ApiUploadthingRoute
+  '/api/uploadthing': typeof ApiUploadthingRouteWithChildren
   '/preview/imported': typeof PreviewImportedRoute
-  '/__sprite-editor__/sprites/$': typeof Char91__spriteEditor__Char93SpritesSplatRoute
+  '/api/uploadthing/files': typeof ApiUploadthingFilesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/__sprite-editor__/sprites.json'
     | '/api/uploadthing'
     | '/preview/imported'
-    | '/__sprite-editor__/sprites/$'
+    | '/api/uploadthing/files'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/__sprite-editor__/sprites.json'
-    | '/api/uploadthing'
-    | '/preview/imported'
-    | '/__sprite-editor__/sprites/$'
+  to: '/' | '/api/uploadthing' | '/preview/imported' | '/api/uploadthing/files'
   id:
     | '__root__'
     | '/'
-    | '/__sprite-editor__/sprites.json'
     | '/api/uploadthing'
     | '/preview/imported'
-    | '/__sprite-editor__/sprites/$'
+    | '/api/uploadthing/files'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute: typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute
-  ApiUploadthingRoute: typeof ApiUploadthingRoute
+  ApiUploadthingRoute: typeof ApiUploadthingRouteWithChildren
   PreviewImportedRoute: typeof PreviewImportedRoute
-  Char91__spriteEditor__Char93SpritesSplatRoute: typeof Char91__spriteEditor__Char93SpritesSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -120,31 +100,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadthingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/__sprite-editor__/sprites.json': {
-      id: '/__sprite-editor__/sprites.json'
-      path: '/__sprite-editor__/sprites.json'
-      fullPath: '/__sprite-editor__/sprites.json'
-      preLoaderRoute: typeof Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/__sprite-editor__/sprites/$': {
-      id: '/__sprite-editor__/sprites/$'
-      path: '/__sprite-editor__/sprites/$'
-      fullPath: '/__sprite-editor__/sprites/$'
-      preLoaderRoute: typeof Char91__spriteEditor__Char93SpritesSplatRouteImport
-      parentRoute: typeof rootRouteImport
+    '/api/uploadthing/files': {
+      id: '/api/uploadthing/files'
+      path: '/files'
+      fullPath: '/api/uploadthing/files'
+      preLoaderRoute: typeof ApiUploadthingFilesRouteImport
+      parentRoute: typeof ApiUploadthingRoute
     }
   }
 }
 
+interface ApiUploadthingRouteChildren {
+  ApiUploadthingFilesRoute: typeof ApiUploadthingFilesRoute
+}
+
+const ApiUploadthingRouteChildren: ApiUploadthingRouteChildren = {
+  ApiUploadthingFilesRoute: ApiUploadthingFilesRoute,
+}
+
+const ApiUploadthingRouteWithChildren = ApiUploadthingRoute._addFileChildren(
+  ApiUploadthingRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute:
-    Char91__spriteEditor__Char93SpritesChar91DotChar93jsonRoute,
-  ApiUploadthingRoute: ApiUploadthingRoute,
+  ApiUploadthingRoute: ApiUploadthingRouteWithChildren,
   PreviewImportedRoute: PreviewImportedRoute,
-  Char91__spriteEditor__Char93SpritesSplatRoute:
-    Char91__spriteEditor__Char93SpritesSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
