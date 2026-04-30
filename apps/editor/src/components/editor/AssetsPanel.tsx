@@ -104,7 +104,11 @@ function AssetRow(props: {
   const trigger = previewUrl ? (
     <HoverCard>
       <HoverCardTrigger delay={0} closeDelay={0} render={button} />
-      <HoverCardContent side="right" sideOffset={12}>
+      <HoverCardContent
+        side="right"
+        sideOffset={12}
+        className="border-[var(--accent)]/60 bg-[#1a1a1a] text-[var(--accent)] shadow-[2px_2px_0_#000]"
+      >
         <div className="flex flex-col items-center gap-2">
           <img
             alt={label}
@@ -112,7 +116,9 @@ function AssetRow(props: {
             draggable={false}
             className="max-h-64 max-w-64 object-contain [image-rendering:pixelated]"
           />
-          <span className="max-w-64 truncate font-mono text-[11px] text-white/68">{label}</span>
+          <span className="max-w-64 truncate font-mono text-[11px] text-[var(--accent)]">
+            {label}
+          </span>
         </div>
       </HoverCardContent>
     </HoverCard>
@@ -279,7 +285,7 @@ function DeleteUploadedAssetButton({
   );
 }
 
-function BulkDeleteAssetsBar({
+function BulkDeleteAssetsFloating({
   count,
   isDeleting,
   onConfirm,
@@ -296,89 +302,101 @@ function BulkDeleteAssetsBar({
 }) {
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
   return (
-    <div className="mx-3 mb-2 flex items-center gap-2 border border-white/14 bg-white/[0.04] px-2 py-1.5">
-      <span className="flex flex-1 items-center gap-1.5 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/68">
-        {isDeleting ? <Loader2 className="h-3 w-3 animate-spin text-white/68" /> : null}
-        {isDeleting ? `Deleting ${count}...` : `${count} selected`}
-      </span>
-      <PopoverRoot open={confirmOpen} onOpenChange={onConfirmOpenChange}>
+    <PopoverRoot open modal={false}>
+      <PopoverTrigger
+        render={<span aria-hidden className="pointer-events-none absolute right-0 top-2 h-0 w-0" />}
+      />
+      <PopoverContent
+        side="right"
+        sideOffset={12}
+        align="start"
+        className="flex w-auto items-center gap-2 border border-white/14 bg-[#1a1a1a] p-1.5 text-foreground shadow-[2px_2px_0_#000]"
+        onPointerDown={stop}
+        onMouseDown={stop}
+      >
+        <span className="flex items-center gap-1.5 px-2 font-[var(--font-ui)] text-[10px] font-bold uppercase tracking-[0.14em] text-white/68">
+          {isDeleting ? <Loader2 className="h-3 w-3 animate-spin text-white/68" /> : null}
+          {isDeleting ? `Deleting ${count}...` : `${count} selected`}
+        </span>
+        <PopoverRoot open={confirmOpen} onOpenChange={onConfirmOpenChange}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="iconButton"
+                      className="h-6 w-6 text-white/48 hover:text-[#f0b1b1]"
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  }
+                />
+              }
+            />
+            <TooltipContent>Delete selected</TooltipContent>
+          </Tooltip>
+          <PopoverContent
+            side="right"
+            sideOffset={8}
+            align="start"
+            className="w-64 border-white/14 bg-[#1a1a1a] p-3 text-foreground"
+            onPointerDown={stop}
+            onMouseDown={stop}
+          >
+            <div className="space-y-3">
+              <div>
+                <div className="font-[var(--font-ui)] text-[12px] font-bold text-white/86">
+                  Delete {count} uploaded asset{count === 1 ? "" : "s"}?
+                </div>
+                <div className="mt-1 font-mono text-[10px] leading-4 text-white/44">
+                  This permanently removes the selected file{count === 1 ? "" : "s"} from
+                  UploadThing storage.
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="muted"
+                  size="compact"
+                  onClick={() => onConfirmOpenChange(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="compact"
+                  className="border-[#e76464]/60 bg-[#2a1515] text-[#f0b1b1] hover:border-[#e76464]"
+                  disabled={isDeleting}
+                  onClick={onConfirm}
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </PopoverRoot>
         <Tooltip>
           <TooltipTrigger
             render={
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="iconButton"
-                    className="h-6 w-6 text-white/48 hover:text-[#f0b1b1]"
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                }
-              />
+              <Button
+                type="button"
+                variant="iconButton"
+                className="h-6 w-6"
+                onClick={onClear}
+                disabled={isDeleting}
+              >
+                <X className="h-3 w-3" />
+              </Button>
             }
           />
-          <TooltipContent>Delete selected</TooltipContent>
+          <TooltipContent>Clear selection</TooltipContent>
         </Tooltip>
-        <PopoverContent
-          side="bottom"
-          sideOffset={8}
-          align="end"
-          className="w-64 border-white/14 bg-[#1a1a1a] p-3 text-foreground"
-          onPointerDown={stop}
-          onMouseDown={stop}
-        >
-          <div className="space-y-3">
-            <div>
-              <div className="font-[var(--font-ui)] text-[12px] font-bold text-white/86">
-                Delete {count} uploaded asset{count === 1 ? "" : "s"}?
-              </div>
-              <div className="mt-1 font-mono text-[10px] leading-4 text-white/44">
-                This permanently removes the selected file{count === 1 ? "" : "s"} from UploadThing
-                storage.
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="muted"
-                size="compact"
-                onClick={() => onConfirmOpenChange(false)}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                size="compact"
-                className="border-[#e76464]/60 bg-[#2a1515] text-[#f0b1b1] hover:border-[#e76464]"
-                disabled={isDeleting}
-                onClick={onConfirm}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </PopoverContent>
-      </PopoverRoot>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant="iconButton"
-              className="h-6 w-6"
-              onClick={onClear}
-              disabled={isDeleting}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          }
-        />
-        <TooltipContent>Clear selection</TooltipContent>
-      </Tooltip>
-    </div>
+      </PopoverContent>
+    </PopoverRoot>
   );
 }
 
@@ -432,6 +450,20 @@ export function AssetsPanel(props: AssetsPanelProps) {
     () => filteredUploadThingAssets.map((asset) => asset.key),
     [filteredUploadThingAssets],
   );
+
+  // Global Escape to clear selection.
+  useEffect(() => {
+    if (selectedKeys.size === 0) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedKeys(new Set());
+        setAnchorKey(null);
+        setBulkConfirmOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [selectedKeys.size]);
 
   // Trim selection to currently visible (filtered) keys.
   useEffect(() => {
@@ -566,8 +598,18 @@ export function AssetsPanel(props: AssetsPanelProps) {
         ref={listRef}
         tabIndex={-1}
         onKeyDown={handleListKeyDown}
-        className="min-h-0 flex-1 overflow-y-auto py-2 outline-none [scrollbar-width:thin]"
+        className="relative min-h-0 flex-1 overflow-y-auto py-2 outline-none [scrollbar-width:thin]"
       >
+        {selectedKeys.size > 0 ? (
+          <BulkDeleteAssetsFloating
+            count={selectedKeys.size}
+            isDeleting={isBulkDeleting}
+            onConfirm={confirmBulkDelete}
+            onClear={clearSelection}
+            confirmOpen={bulkConfirmOpen}
+            onConfirmOpenChange={setBulkConfirmOpen}
+          />
+        ) : null}
         {uploadThingError ? (
           <div className="mx-3 mb-2 border border-[#e76464]/50 bg-[#281313] px-3 py-2 font-mono text-[10px] text-[#f0b1b1]">
             {uploadThingError}
@@ -599,16 +641,6 @@ export function AssetsPanel(props: AssetsPanelProps) {
 
         {filteredUploadThingAssets.length ? (
           <div>
-            {selectedKeys.size > 0 ? (
-              <BulkDeleteAssetsBar
-                count={selectedKeys.size}
-                isDeleting={isBulkDeleting}
-                onConfirm={confirmBulkDelete}
-                onClear={clearSelection}
-                confirmOpen={bulkConfirmOpen}
-                onConfirmOpenChange={setBulkConfirmOpen}
-              />
-            ) : null}
             <SectionHeader label="Assets" count={filteredUploadThingAssets.length} />
             <div className="flex flex-col">
               {filteredUploadThingAssets.map((asset) => (
