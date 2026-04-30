@@ -1,4 +1,5 @@
 import { AssetsPanel } from "@/components/editor/AssetsPanel";
+import { ExportMenu } from "@/components/editor/ExportMenu";
 import { NewSceneModal } from "@/components/editor/NewSceneModal";
 import { SceneTabs } from "@/components/editor/SceneTabs";
 import { ScenesPanel } from "@/components/editor/ScenesPanel";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
-import { buildEmbeddedExportProject, serializeEmbeddedProject } from "@/editor/assets";
 import { DEFAULT_VIEWPORT_SCALE, GRID_SIZE_BREAKPOINTS } from "@/editor/constants";
 import { isAssetDragData, isSceneTabDragData, type EditorDragData } from "@/editor/dnd";
 import { nextId, swapAtIndex } from "@/editor/geometry";
@@ -50,18 +50,6 @@ export function EditorApp() {
     nextPersistenceSlotRef,
     restoredWorkspaceScrollRef,
   });
-
-  const handleExport = async () => {
-    const embeddedProject = await buildEmbeddedExportProject(state.project);
-    const json = serializeEmbeddedProject(embeddedProject);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "scene.sprite.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
 
   const handleImportProject = async (file: File | undefined) => {
     if (!file) return;
@@ -321,22 +309,7 @@ export function EditorApp() {
                 <TooltipContent>Preview current scene</TooltipContent>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="accent"
-                      size="compact"
-                      type="button"
-                      className="h-8 px-3"
-                      onClick={() => void handleExport()}
-                    >
-                      Export
-                    </Button>
-                  }
-                />
-                <TooltipContent>Export project JSON</TooltipContent>
-              </Tooltip>
+              <ExportMenu project={state.project} />
             </div>
           </header>
 
