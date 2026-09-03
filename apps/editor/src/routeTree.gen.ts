@@ -10,8 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PreviewImportedRouteImport } from './routes/preview/imported'
 import { Route as ApiUploadthingRouteImport } from './routes/api/uploadthing'
+import { Route as PreviewImportedRouteImport } from './routes/preview/imported'
 import { Route as ApiUploadthingFilesRouteImport } from './routes/api/uploadthing/files'
 
 const IndexRoute = IndexRouteImport.update({
@@ -19,14 +19,14 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PreviewImportedRoute = PreviewImportedRouteImport.update({
-  id: '/preview/imported',
-  path: '/preview/imported',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiUploadthingRoute = ApiUploadthingRouteImport.update({
   id: '/api/uploadthing',
   path: '/api/uploadthing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreviewImportedRoute = PreviewImportedRouteImport.update({
+  id: '/preview/imported',
+  path: '/preview/imported',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUploadthingFilesRoute = ApiUploadthingFilesRouteImport.update({
@@ -57,10 +57,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/api/uploadthing'
-    | '/preview/imported'
-    | '/api/uploadthing/files'
+    '/' | '/api/uploadthing' | '/preview/imported' | '/api/uploadthing/files'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/api/uploadthing' | '/preview/imported' | '/api/uploadthing/files'
   id:
@@ -86,18 +83,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/preview/imported': {
-      id: '/preview/imported'
-      path: '/preview/imported'
-      fullPath: '/preview/imported'
-      preLoaderRoute: typeof PreviewImportedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/uploadthing': {
       id: '/api/uploadthing'
       path: '/api/uploadthing'
       fullPath: '/api/uploadthing'
       preLoaderRoute: typeof ApiUploadthingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preview/imported': {
+      id: '/preview/imported'
+      path: '/preview/imported'
+      fullPath: '/preview/imported'
+      preLoaderRoute: typeof PreviewImportedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/uploadthing/files': {

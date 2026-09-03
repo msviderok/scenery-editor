@@ -10,7 +10,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "ignoreDeprecations": "6.0",
-    "types": ["vite/client"]
+    "ignoreDeprecations": "6.0"
   }
 }
